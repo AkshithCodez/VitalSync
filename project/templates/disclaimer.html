@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Disclaimer{% endblock %}
+
+{% block content %}
+<div class="card-container">
+    <h2>Important Disclaimer</h2>
+    <p>The information provided by VitalSync's AI Health Report is for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment.</p>
+    <p>Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Never disregard professional medical advice or delay in seeking it because of something you have read in this application.</p>
+    <div class="input-form">
+        <a href="{{ url_for('main.generate_report') }}" class="accept-button">I Understand and Accept</a>
+    </div>
+</div>
+{% endblock %}

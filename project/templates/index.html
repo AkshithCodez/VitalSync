@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="welcome-header">
+    <h3>Managing: <strong>{{ user.condition }}</strong></h3>
+</div>
+
+<div class="tracker-container card-container">
+    <div class="header-with-button">
+        <h2>✅ Daily Health Tracker</h2>
+        <a href="{{ url_for('main.reset_tasks') }}" class="reset-button">Reset Day</a>
+    </div>
+    <form action="{{ url_for('main.add_task') }}" method="POST" class="input-form">
+        <input type="text" name="task" placeholder="Add a new daily task..." required>
+        <button type="submit" {% if tasks|length >= 15 %}disabled{% endif %}>Add Task</button>
+    </form>
+    <ul class="task-list">
+        {% for task in tasks %}
+        <li class="{% if task.done %}done{% endif %}">
+            <a href="{{ url_for('main.toggle_task', task_id=task.id) }}" class="task-content">
+                <span class="checkbox"></span>
+                {{ task.text }}
+            </a>
+            <a href="{{ url_for('main.delete_task', task_id=task.id) }}" class="delete-button">×</a>
+        </li>
+        {% else %}
+        <p class="empty-state">No daily tasks added yet.</p>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="planner-container card-container">
+    <h2>🗓️ Doctor's Visit Planner</h2>
+    <p>Jot down questions for your next appointment.</p>
+    <form action="{{ url_for('main.add_item') }}" method="POST" class="input-form">
+        <input type="text" name="item" placeholder="e.g., Ask about side effects..." required>
+        <button type="submit">Add</button>
+    </form>
+    <ul class="task-list">
+        {% for item in items %}
+        <li>
+            <span class="task-content">{{ item.text }}</span>
+            <a href="{{ url_for('main.delete_item', item_id=item.id) }}" class="delete-button">×</a>
+        </li>
+        {% else %}
+        <p class="empty-state">No questions added yet.</p>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
