@@ -7,6 +7,29 @@
     <h3>Managing: <strong>{{ user.condition }}</strong></h3>
 </div>
 
+<div class="report-container card-container">
+    <h2>🤖 AI Health Report</h2>
+    <div class="report-container card-container">
+    <div class="header-with-button">
+        <h2>🤖 AI Health Report</h2>
+        {% if user.ai_report %}
+            <a href="{{ url_for('main.download_report') }}" class="reset-button">Download PDF</a>
+        {% endif %}
+    </div>
+    {% if user.ai_report %}
+        <div class="report-content">
+            <pre>{{ user.ai_report }}</pre>
+        </div>
+    {% else %}
+        <div class="generating-message">
+            <p>Your personalized AI report is being generated. Please check back in a minute and refresh the page.</p>
+        </div>
+        <div class="disclaimer">
+            <p><strong>Important Disclaimer:</strong> The information provided is for informational purposes only and is not a substitute for professional medical advice. Always seek the advice of your physician.</p>
+        </div>
+    {% endif %}
+</div>
+
 <div class="tracker-container card-container">
     <div class="header-with-button">
         <h2>✅ Daily Health Tracker</h2>
