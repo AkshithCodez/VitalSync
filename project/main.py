@@ -1,11 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 from flask_login import login_required, current_user
 from .models import DailyTask, PlannerItem, User
 from . import db
 import google.generativeai as genai
 import os
 from . import create_app
-from flask_weasyprint import HTML, render_pdf # <-- NEW IMPORT
+from flask_weasyprint import HTML, render_pdf
 
 main = Blueprint('main', __name__)
 
@@ -17,24 +17,21 @@ def generate_report_in_background(user_id):
     with app.app_context():
         user = User.query.get(user_id)
         if not user.ai_report and user.condition:
-            
-            # --- THIS IS THE UPDATED PROMPT ---
             prompt = f"""
             You are a helpful health information assistant. Your goal is to provide a general, supportive summary of a health condition for a user who has already been diagnosed by a doctor.
 
             **IMPORTANT RULES:**
             1.  **DO NOT** provide medical advice.
-            2.  **DO NOT** prescribe, mention, or recommend any specific pharmaceutical drugs or medications.
-            3.  You **CAN** suggest common, safe, non-prescription home-remedy-style actions for temporary relief (e.g., 'gargling salt water for a sore throat'). Frame these as 'supportive measures for comfort', not 'treatments'.
-            4.  You **CAN** recommend general vitamins, nutrients, and healthy lifestyle choices (like diet and exercise) that are known to support the management of the condition.
-            5.  Use simple, clear, and encouraging language. The output should be formatted as plain text.
+            2.  **DO NOT** prescribe, mention, or recommend any specific pharmaceutical drugs, dosages, or brand names.
+            3.  You **CAN** mention common, publicly known active ingredients (like 'minoxidil'), but you **MUST** frame them as topics for the user to "discuss with their doctor", not as a direct recommendation.
+            4.  You **CAN** suggest common, safe, non-prescription home-remedy-style actions for temporary relief.
+            5.  You **CAN** recommend general vitamins, nutrients, and healthy lifestyle choices (like diet and exercise) that are known to support the management of the condition.
+            6.  Use simple, clear, and encouraging language. The output should be formatted as plain text.
 
             The user's diagnosed condition is: "{user.condition}"
 
-            Please generate a report with four sections: "Understanding Your Condition", "Potential Consequences", "Supportive Measures for Comfort", and "Beneficial Nutrients & Lifestyle".
+            Please generate a report with the following sections: "Understanding Your Condition", "Potential Consequences", "Supportive Measures for Comfort", "Beneficial Nutrients & Lifestyle", and "Topics to Discuss With Your Doctor".
             """
-            # --- END OF UPDATED PROMPT ---
-
             try:
                 response = model.generate_content(prompt)
                 user.ai_report = response.text
@@ -43,7 +40,6 @@ def generate_report_in_background(user_id):
                 user.ai_report = f"Sorry, there was an error generating the report. Please try again later. Error: {e}"
                 db.session.commit()
 
-# --- The /home route is unchanged ---
 @main.route('/')
 @login_required
 def home():
@@ -51,16 +47,52 @@ def home():
     items = PlannerItem.query.filter_by(user_id=current_user.id).all()
     return render_template('index.html', user=current_user, tasks=tasks, items=items)
 
-# --- NEW ROUTE for PDF Download ---
+
+# --- THIS IS THE MISSING FUNCTION TO ADD ---
 @main.route('/download_report')
 @login_required
 def download_report():
-    # Render a special, clean HTML template for the PDF
     html = render_template('report_pdf.html', user=current_user)
-    # Generate the PDF from that HTML
+    return render_pdf(HTML(string=html))
+# --- END OF NEW FUNCTION ---
+
+
+@main.route('/chat', methods=['POST'])
+@login_required
+def chat():
+    user_message = request.json['message']
+    user_condition = current_user.condition
+
+    prompt = f"""
+    You are 'VitalSync Assistant,' a supportive and informational AI health companion. 
+    Your role is to help a user understand their diagnosed health condition: '{user_condition}'.
+    
+    **Your most important rules are:**
+    1.  **NEVER** provide medical advice.
+    2.  **NEVER** suggest, recommend, or mention any specific medications (prescription or over-the-counter), brands, or dosages.
+    3.  **NEVER** diagnose any condition.
+    4.  **ALWAYS** end your response with a clear disclaimer to consult a healthcare professional for any medical advice.
+    5.  You **CAN** explain concepts, symptoms, and general lifestyle/nutrition in relation to their condition.
+    
+    The user's question is: "{user_message}"
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        ai_reply = response.text
+    except Exception:
+        ai_reply = "Sorry, I'm having trouble connecting to my knowledge base right now. Please try again later."
+    
+    return jsonify({'reply': ai_reply})
+
+@main.route('/download_planner')
+@login_required
+def download_planner():
+    items = PlannerItem.query.filter_by(user_id=current_user.id).all()
+    html = render_template('planner_pdf.html', user=current_user, items=items)
     return render_pdf(HTML(string=html))
 
-# --- All other routes (add_item, delete_task, etc.) remain the same ---
+# ... The rest of the file (add_item, delete_item, etc.) remains the same
 @main.route('/add_item', methods=['POST'])
 @login_required
 def add_item():
