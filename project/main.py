@@ -10,7 +10,7 @@ from datetime import datetime
 
 main = Blueprint('main', __name__)
 
-genai.configure(api_key=os.getenv("AIzaSyCp6kXGriq7cyFI787IOJqIlkLfcI4qSrU"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 def generate_report_in_background(user_id):
@@ -62,15 +62,21 @@ def chat():
     user_message = request.json['message']
     user_condition = current_user.condition
     prompt = f"""
-    You are 'VitalSync Assistant,' a supportive AI health companion for condition '{user_condition}'.
-    **RULES:** NEVER provide medical advice. NEVER mention medications. ALWAYS end with a disclaimer to consult a doctor.
+    You are 'VitalSync Assistant,' a supportive and informational AI health companion. 
+    Your role is to help a user understand their diagnosed health condition: '{user_condition}'.
+    **Your most important rules are:**
+    1.  **NEVER** provide medical advice.
+    2.  **NEVER** suggest, recommend, or mention any specific medications (prescription or over-the-counter), brands, or dosages.
+    3.  **NEVER** diagnose any condition.
+    4.  **ALWAYS** end your response with a clear disclaimer to consult a healthcare professional for any medical advice.
+    5.  You **CAN** explain concepts, symptoms, and general lifestyle/nutrition in relation to their condition.
     The user's question is: "{user_message}"
     """
     try:
         response = model.generate_content(prompt)
         ai_reply = response.text
     except Exception:
-        ai_reply = "Sorry, I'm having trouble connecting right now. Please try again later."
+        ai_reply = "Sorry, I'm having trouble connecting to my knowledge base right now. Please try again later."
     return jsonify({'reply': ai_reply})
 
 @main.route('/download_report')
