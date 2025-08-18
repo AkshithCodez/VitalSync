@@ -9,6 +9,7 @@
         .user-info { background-color: #f7fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         ul { list-style-type: none; padding-left: 0; }
         li { background-color: #f7fafc; border: 1px solid #e2e8f0; padding: 12px; margin-bottom: 8px; border-radius: 6px; }
+        li strong { color: #2c5282; } /* Style for the date */
         .footer { text-align: center; margin-top: 40px; font-size: 10pt; color: #718096; }
     </style>
 </head>
@@ -21,7 +22,7 @@
     <h2>Questions and Topics to Discuss:</h2>
     <ul>
         {% for item in items %}
-            <li>{{ item.text }}</li>
+            <li><strong>Date: {{ item.appointment_date.strftime('%Y-%m-%d') }}</strong><br>{{ item.text }}</li>
         {% else %}
             <li>No items were added to the planner.</li>
         {% endfor %}

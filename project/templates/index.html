@@ -4,7 +4,8 @@
 
 {% block content %}
 <div class="welcome-header">
-    <h3>Managing: <strong>{{ user.condition }}</strong></h3>
+    <h3>Welcome, <strong>{{ user.name }}</strong>!</h3>
+    <p>Managing: <strong>{{ user.condition }}</strong></p>
 </div>
 
 <div class="dashboard-layout">
@@ -23,9 +24,6 @@
             {% else %}
                 <div class="generating-message">
                     <p>Your personalized AI report is being generated. Please check back in a minute and refresh the page.</p>
-                </div>
-                <div class="disclaimer">
-                    <p><strong>Important Disclaimer:</strong> The information provided is for informational purposes only and is not a substitute for professional medical advice.</p>
                 </div>
             {% endif %}
         </div>
@@ -53,119 +51,44 @@
                 {% endfor %}
             </ul>
         </div>
+    </div>
 
+    <div class="dashboard-column">
+        <div class="calendar-container card-container">
+            <h2>📅 Calendar</h2>
+            <div id="calendar"></div>
+        </div>
+        
         <div class="planner-container card-container">
             <div class="header-with-button">
                 <h2>🗓️ Doctor's Visit Planner</h2>
                 <a href="{{ url_for('main.download_planner') }}" class="reset-button" target="_blank">Download PDF</a>
             </div>
-            <p>Jot down questions for your next appointment.</p>
-            <form action="{{ url_for('main.add_item') }}" method="POST" class="input-form">
+            <p>Log appointments and questions to discuss.</p>
+            <form action="{{ url_for('main.add_item') }}" method="POST" class="input-form-stacked">
+                <label for="date">Appointment Date:</label>
+                <input type="date" name="date" required>
+                <label for="item">Question or Topic:</label>
                 <input type="text" name="item" placeholder="e.g., Ask about side effects..." required>
-                <button type="submit">Add</button>
-            </form>
-            <ul class="task-list">
-                {% for item in items %}
-                <li>
-                    <span class="task-content">{{ item.text }}</span>
-                    <a href="{{ url_for('main.delete_item', item_id=item.id) }}" class="delete-button">×</a>
-                </li>
-                {% else %}
-                <p class="empty-state">No questions added yet.</p>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-
-    <div class="dashboard-column">
-        <div class="chat-container card-container">
-            <h2>💬 AI Health Assistant</h2>
-            <div class="chat-window" id="chat-window">
-                <div class="chat-message ai-message">
-                    <p>Hello! I'm your AI Health Assistant. Ask me any general questions you have about your condition. Please remember, I cannot provide medical advice.</p>
-                </div>
-            </div>
-            <form class="chat-form" id="chat-form">
-                <input type="text" id="chat-input" placeholder="Ask a question..." required>
-                <button type="submit">Send</button>
+                <button type="submit">Add to Calendar</button>
             </form>
         </div>
     </div>
 </div>
 
 <script>
-    // This script powers the chatbot
-    const chatForm = document.getElementById('chat-form');
-    const chatInput = document.getElementById('chat-input');
-    const chatWindow = document.getElementById('chat-window');
-
-    chatForm.addEventListener('submit', async function(event) {
-        event.preventDefault(); // Stop the page from reloading
-
-        const userMessage = chatInput.value.trim();
-        if (userMessage === "") {
-            return;
-        }
-
-        // 1. Display the user's message immediately
-        appendMessage(userMessage, 'user-message');
-        chatInput.value = ""; // Clear the input box
-
-        // 2. Show a "typing" indicator for the AI
-        appendMessage("...", 'ai-message', true);
-
-        try {
-            // 3. Send the message to our Flask backend
-            const response = await fetch("{{ url_for('main.chat') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: userMessage })
-            });
-
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            
-            const data = await response.json();
-            const aiReply = data.reply;
-            
-            // 4. Remove the "typing" indicator
-            removeTypingIndicator();
-
-            // 5. Display the AI's actual reply
-            appendMessage(aiReply, 'ai-message');
-
-        } catch (error) {
-            console.error("Error:", error);
-            removeTypingIndicator();
-            appendMessage("Sorry, I'm having trouble connecting. Please try again later.", 'ai-message');
-        }
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek'
+            },
+            events: '/api/events'
+        });
+        calendar.render();
     });
-
-    function appendMessage(text, className, isTyping = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('chat-message', className);
-        
-        const messageP = document.createElement('p');
-        messageP.textContent = text;
-        
-        if (isTyping) {
-            messageDiv.id = 'typing-indicator';
-            messageP.classList.add('typing-animation');
-        }
-        
-        messageDiv.appendChild(messageP);
-        chatWindow.appendChild(messageDiv);
-        chatWindow.scrollTop = chatWindow.scrollHeight; // Auto-scroll to the bottom
-    }
-
-    function removeTypingIndicator() {
-        const typingIndicator = document.getElementById('typing-indicator');
-        if (typingIndicator) {
-            typingIndicator.remove();
-        }
-    }
 </script>
 {% endblock %}
