@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // This script runs immediately to prevent a flash of the wrong theme.
+        (function() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+            }
+        })();
+    </script>
 </head>
 <body>
     <nav class="navbar">
@@ -22,6 +31,13 @@
                 <a href="{{ url_for('auth.login') }}">Login</a>
                 <a href="{{ url_for('auth.register') }}">Register</a>
             {% endif %}
+            
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-checkbox">
+                    <input type="checkbox" id="theme-checkbox" />
+                    <div class="slider round"></div>
+                </label>
+            </div>
         </div>
     </nav>
     <div class="content">
@@ -33,22 +49,26 @@
         {% block content %}{% endblock %}
     </div>
 
-    {% if current_user.is_authenticated %}
-    <div class="chat-widget">
-        <button class="chat-toggle-button" id="chat-toggle-button">💬</button>
-        <div class="chat-container card-container hidden" id="chat-widget-container">
-            <h2>💬 AI Health Assistant</h2>
-            <div class="chat-window" id="chat-window">
-                <div class="chat-message ai-message"><p>Hello! Ask me any general questions about your condition.</p></div>
-            </div>
-            <form class="chat-form" id="chat-form" data-chat-url="{{ url_for('main.chat') }}">
-                <input type="text" id="chat-input" placeholder="Ask a question..." required>
-                <button type="submit">Send</button>
-            </form>
-        </div>
-    </div>
-    
-    <script src="{{ url_for('static', filename='js/chat.js') }}" defer></script>
-    {% endif %}
+    <script>
+        // --- Theme Toggle Logic ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('theme-checkbox');
+            
+            // Set initial state of the toggle based on saved theme
+            if (localStorage.getItem('theme') === 'dark') {
+                themeToggle.checked = true;
+            }
+
+            themeToggle.addEventListener('change', function() {
+                if(this.checked) {
+                    document.documentElement.classList.add('dark-mode');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark-mode');
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
