@@ -28,6 +28,7 @@
     /* Advanced Typography Colors */
     --text-color: hsl(220, 18%, 20%);
     --text-muted-color: hsl(220, 12%, 45%);
+    --select-text-color: hsl(220, 18%, 20%);
     --header-color: 
         linear-gradient(135deg, 
             hsl(var(--hue-medical-primary), 70%, 45%) 0%,
@@ -103,6 +104,7 @@ html.dark-mode {
     
     --text-color: hsl(210, 20%, 88%);
     --text-muted-color: hsl(210, 15%, 65%);
+    --select-text-color: hsl(210, 20%, 88%);
     --header-color: 
         linear-gradient(135deg, 
             hsl(var(--hue-medical-primary), 70%, 70%) 0%,
@@ -224,6 +226,7 @@ input, select {
     padding: 14px 16px; font-size: 16px; font-family: inherit;
     background: var(--subtle-bg-color); color: var(--text-color); transition: all var(--transition-normal);
 }
+select { color: var(--select-text-color, var(--text-color)); }
 input:focus, select:focus { outline: none; border-color: hsla(var(--hue-medical-primary), 60%, 50%, 0.5); box-shadow: 0 0 0 3px hsla(var(--hue-medical-primary), 60%, 50%, 0.2); }
 button {
     background: var(--primary-color); color: white; border: none; border-radius: 12px;
@@ -280,8 +283,12 @@ html.dark-mode .fc-daygrid-day-number, html.dark-mode .fc-col-header-cell-cushio
 /* --- Chatbot Card Styles --- */
 .chat-container { display: flex; flex-direction: column; height: 500px; }
 .chat-window { flex-grow: 1; overflow-y: auto; padding: 16px; background: var(--subtle-bg-color); border: 1px solid var(--border-color); border-radius: 16px; margin-bottom: 20px; }
+.chat-message { margin-bottom: 16px; display: flex; }
+.chat-message p { padding: 14px 20px; border-radius: 20px; line-height: 1.5; max-width: 85%; margin: 0; text-align: left; font-weight: 500; }
 .user-message p { background: var(--primary-color); color: white; margin-left: auto; border-radius: 20px 20px 6px 20px; }
 .ai-message p { background: var(--card-bg-color); color: var(--text-color); border-radius: 20px 20px 20px 6px; border: 1px solid var(--border-color); }
+.typing-animation::after { content: '.'; animation: typing 1s infinite; }
+@keyframes typing { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
 
 /* --- Theme Toggle Switch --- */
 .theme-switch-wrapper { display: flex; align-items: center; margin-left: 20px; }

@@ -10,7 +10,7 @@
 <div class="dashboard-layout-single">
     <div class="card-container">
         <div class="report-content">
-            <pre>{{ grocery_list }}</pre>
+            <pre>{{ grocery_list_html|safe }}</pre>
         </div>
         <a href="{{ url_for('main.diet') }}" class="button-full-width" style="margin-top: 20px;">Back to Diet Planner</a>
     </div>

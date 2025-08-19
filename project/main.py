@@ -87,12 +87,7 @@ def assistant():
 def diet():
     today = date.today()
     meals = Meal.query.filter_by(owner=current_user, date=today).all()
-    totals = {
-        'calories': sum(m.calories for m in meals if m.is_eaten),
-        'protein': sum(m.protein for m in meals if m.is_eaten),
-        'carbs': sum(m.carbs for m in meals if m.is_eaten),
-        'fats': sum(m.fats for m in meals if m.is_eaten)
-    }
+    totals = {'calories': sum(m.calories for m in meals if m.is_eaten), 'protein': sum(m.protein for m in meals if m.is_eaten), 'carbs': sum(m.carbs for m in meals if m.is_eaten), 'fats': sum(m.fats for m in meals if m.is_eaten)}
     return render_template('diet.html', user=current_user, meals=meals, totals=totals, today=today)
 
 @main.route('/api/events')
@@ -174,20 +169,17 @@ def generate_meal_plan():
     }}
     """
     try:
-        print("--- Sending meal plan prompt to AI... ---")
         response = model.generate_content(prompt)
         cleaned_text = response.text.strip().replace('```json', '').replace('```', '').strip()
-        print(f"--- AI Response Received:\n{cleaned_text}\n---")
         meal_plan = json.loads(cleaned_text)
         for meal_type, food_items in meal_plan.items():
             for item in food_items:
                 add_meal_from_ai(item, meal_type, current_user)
         db.session.commit()
-        print("--- Meal plan successfully parsed and saved. ---")
     except Exception as e:
         db.session.rollback()
-        print(f"!!! MEAL PLAN GENERATION FAILED: {e} !!!")
         flash("Sorry, there was an error generating the meal plan. Please try again.")
+        print(f"Meal plan error: {e}")
     return redirect(url_for('main.diet'))
 
 @main.route('/grocery_list')
@@ -200,6 +192,7 @@ def grocery_list():
     prompt = f"Consolidate the following meal items into a simple, categorized grocery list with markdown bolding for titles: {', '.join(ingredients)}"
     try:
         response = model.generate_content(prompt)
+        # Convert markdown bold to HTML strong tags
         grocery_list_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', response.text)
     except Exception as e:
         grocery_list_html = f"<p>Could not generate grocery list. Error: {e}</p>"
