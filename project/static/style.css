@@ -150,3 +150,35 @@ button:disabled { background-color: #a0aec0; cursor: not-allowed; }
 .bmi-result p {
     margin-top: 0;
 }
+
+/* --- Styles for Unit Inputs --- */
+.unit-input {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.unit-input input {
+    margin-bottom: 0; /* Override stacked form margin */
+}
+.unit-input select {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e0;
+}
+
+/* --- Styles for BMI Table --- */
+.bmi-table {
+    width: 100%;
+    margin-top: 24px;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+.bmi-table th, .bmi-table td {
+    border: 1px solid #e2e8f0;
+    padding: 8px;
+    text-align: left;
+}
+.bmi-table th {
+    background-color: #f7fafc;
+    font-weight: bold;
+}

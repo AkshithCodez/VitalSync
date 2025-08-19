@@ -17,17 +17,13 @@
                     <option value="Weight">Weight (kg)</option>
                     <option value="Blood Sugar">Blood Sugar (mg/dL)</option>
                     <option value="Heart Rate">Heart Rate (bpm)</option>
-                    <option value="Pain Level">Pain Level (1-10)</option>
                     <option value="Sleep">Sleep (hours)</option>
                 </select>
-
                 <label for="metric_value">Value:</label>
                 <input type="text" name="metric_value" placeholder="e.g., 75.5" required>
-                
                 <button type="submit">Log Vital</button>
             </form>
         </div>
-
         <div class="card-container">
             <h2>Recent Logs</h2>
             <ul class="task-list">
@@ -64,7 +60,6 @@
                         <option value="Weight">Weight</option>
                         <option value="Blood Sugar">Blood Sugar</option>
                         <option value="Heart Rate">Heart Rate</option>
-                        <option value="Pain Level">Pain Level</option>
                         <option value="Sleep">Sleep</option>
                     </select>
                 </div>
@@ -74,13 +69,34 @@
             <div id="bmi-container" class="hidden">
                 <h2>BMI Calculator</h2>
                 <form id="bmi-form" class="input-form-stacked">
-                    <label for="height">Height (cm):</label>
-                    <input type="number" id="height" placeholder="e.g., 175" required>
-                    <label for="weight">Weight (kg):</label>
-                    <input type="number" id="weight" placeholder="e.g., 75.5" required>
+                    <label for="height">Height:</label>
+                    <div class="unit-input">
+                        <input type="number" id="height" step="0.01" required>
+                        <select id="height-unit">
+                            <option value="cm">cm</option>
+                            <option value="ft">ft</option>
+                        </select>
+                    </div>
+                    <label for="weight">Weight:</label>
+                    <div class="unit-input">
+                        <input type="number" id="weight" step="0.01" required>
+                        <select id="weight-unit">
+                            <option value="kg">kg</option>
+                            <option value="lbs">lbs</option>
+                        </select>
+                    </div>
                     <button type="submit">Calculate BMI</button>
                 </form>
                 <div id="bmi-result" class="bmi-result"></div>
+                <table class="bmi-table">
+                    <thead><tr><th colspan="2">BMI Categories</th></tr></thead>
+                    <tbody>
+                        <tr><td>Below 18.5</td><td>Underweight</td></tr>
+                        <tr><td>18.5 – 24.9</td><td>Healthy Weight</td></tr>
+                        <tr><td>25.0 – 29.9</td><td>Overweight</td></tr>
+                        <tr><td>30.0 and Above</td><td>Obesity</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -92,7 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const toolSelect = document.getElementById('tool-select');
     const chartContainer = document.getElementById('chart-container');
     const bmiContainer = document.getElementById('bmi-container');
-
     toolSelect.addEventListener('change', function() {
         if (this.value === 'chart') {
             chartContainer.classList.remove('hidden');
@@ -103,50 +118,88 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- BMI Calculator Logic ---
+    // --- BMI Calculator Logic with Unit Conversion ---
     const bmiForm = document.getElementById('bmi-form');
-    const heightInput = document.getElementById('height');
-    const weightInput = document.getElementById('weight');
-    const bmiResultDiv = document.getElementById('bmi-result');
-
     bmiForm.addEventListener('submit', function(event) {
         event.preventDefault();
-        const height = parseFloat(heightInput.value) / 100; // Convert cm to meters
-        const weight = parseFloat(weightInput.value);
+        const heightInput = document.getElementById('height');
+        const weightInput = document.getElementById('weight');
+        const heightUnit = document.getElementById('height-unit').value;
+        const weightUnit = document.getElementById('weight-unit').value;
+        const bmiResultDiv = document.getElementById('bmi-result');
 
-        if (height > 0 && weight > 0) {
-            const bmi = (weight / (height * height)).toFixed(1);
+        let heightInMeters = parseFloat(heightInput.value);
+        let weightInKg = parseFloat(weightInput.value);
+
+        // Convert units to metric
+        if (heightUnit === 'ft') {
+            heightInMeters = heightInMeters * 0.3048;
+        } else {
+            heightInMeters = heightInMeters / 100;
+        }
+        if (weightUnit === 'lbs') {
+            weightInKg = weightInKg * 0.453592;
+        }
+
+        if (heightInMeters > 0 && weightInKg > 0) {
+            const bmi = (weightInKg / (heightInMeters * heightInMeters)).toFixed(1);
             let category = '';
             if (bmi < 18.5) category = 'Underweight';
             else if (bmi < 25) category = 'Healthy Weight';
             else if (bmi < 30) category = 'Overweight';
             else category = 'Obesity';
-
-            bmiResultDiv.innerHTML = `<h3>Your BMI is: ${bmi}</h3><p>This is considered: <strong>${category}</strong></p>`;
+            bmiResultDiv.innerHTML = `<h3>Your BMI is: ${bmi}</h3><p>Category: <strong>${category}</strong></p>`;
         } else {
             bmiResultDiv.innerHTML = `<p style="color: red;">Please enter valid height and weight.</p>`;
         }
     });
 
-    // --- Chart Logic ---
+    // --- Chart Logic with Reference Ranges ---
     const ctx = document.getElementById('vitalsChart').getContext('2d');
-    let vitalsChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: [], datasets: [{ label: 'Loading...', data: [], borderColor: '#3182ce', tension: 0.1 }] }
-    });
+    let vitalsChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
     const metricSelectChart = document.getElementById('metric-select-chart');
 
     async function updateChart() {
         const selectedMetric = metricSelectChart.value;
         const response = await fetch(`/api/vitals_data?metric=${selectedMetric}`);
         const chartData = await response.json();
+
+        const datasets = [{
+            label: selectedMetric,
+            data: chartData.data,
+            borderColor: '#3182ce',
+            tension: 0.1,
+            fill: false
+        }];
+
+        // Add high/low range lines if they exist
+        if (chartData.ranges.high) {
+            datasets.push({
+                label: 'High',
+                data: Array(chartData.labels.length).fill(chartData.ranges.high),
+                borderColor: '#e53e3e', // Red
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            });
+        }
+        if (chartData.ranges.low) {
+            datasets.push({
+                label: 'Low',
+                data: Array(chartData.labels.length).fill(chartData.ranges.low),
+                borderColor: '#4299e1', // Blue
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            });
+        }
+        
         vitalsChart.data.labels = chartData.labels;
-        vitalsChart.data.datasets[0].data = chartData.data;
-        vitalsChart.data.datasets[0].label = selectedMetric;
+        vitalsChart.data.datasets = datasets;
         vitalsChart.update();
     }
     metricSelectChart.addEventListener('change', updateChart);
-    updateChart(); // Load initial chart
+    updateChart();
 });
 </script>
 {% endblock %}

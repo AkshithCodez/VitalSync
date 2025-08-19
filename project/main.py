@@ -4,7 +4,7 @@ from .models import PlannerItem, User, VitalsLog
 from . import db
 import google.generativeai as genai
 import os
-import re # Import for text replacement
+import re
 from . import create_app
 from flask_weasyprint import HTML, render_pdf
 from datetime import datetime
@@ -27,12 +27,11 @@ def generate_report_in_background(user_id):
             2.  **DO NOT** prescribe, mention, or recommend any specific pharmaceutical drugs or medications.
             3.  You **CAN** suggest common, safe, non-prescription home-remedy-style actions for temporary relief.
             4.  You **CAN** recommend general vitamins, nutrients, and healthy lifestyle choices.
-            5.  Use simple, clear, and encouraging language.
-            6.  **Format all section titles with markdown bolding (e.g., **Section Title**).**
+            5.  Format all section titles with markdown bolding (e.g., **Section Title**).
 
             The user's diagnosed condition is: "{user.condition}"
 
-            Please generate a report with the following sections: **Understanding Your Condition**, **Potential Consequences**, **Supportive Measures for Comfort**, and **Beneficial Nutrients & Lifestyle**.
+            Please generate a report with four sections: **Understanding Your Condition**, **Potential Consequences**, **Supportive Measures for Comfort**, and **Beneficial Nutrients & Lifestyle**.
             """
             try:
                 response = model.generate_content(prompt)
@@ -71,9 +70,29 @@ def api_events():
 def api_vitals_data():
     metric = request.args.get('metric', 'Weight')
     logs = VitalsLog.query.filter_by(user_id=current_user.id, metric_name=metric).order_by(VitalsLog.date.asc()).all()
+    
+    ranges = {
+        "Blood Sugar": {"high": 180, "low": 70},
+        "Heart Rate": {"high": 100, "low": 60},
+        "Sleep": {"high": 9, "low": 7},
+        "Weight": {"high": None, "low": None},
+    }
+    
     labels = [log.date.strftime('%Y-%m-%d') for log in logs]
-    data = [float(log.metric_value) for log in logs if log.metric_value.replace('.', '', 1).isdigit()]
-    return jsonify({'labels': labels, 'data': data})
+    data = []
+    for log in logs:
+        try:
+            # This handles cases like '120/80' by just taking the first number
+            numeric_part = re.split(r'[/ ]', log.metric_value)[0]
+            data.append(float(numeric_part))
+        except (ValueError, TypeError):
+            continue
+
+    return jsonify({
+        'labels': labels, 
+        'data': data,
+        'ranges': ranges.get(metric, {"high": None, "low": None})
+    })
 
 @main.route('/chat', methods=['POST'])
 @login_required
@@ -81,30 +100,22 @@ def chat():
     user_message = request.json['message']
     user_condition = current_user.condition
     prompt = f"""
-    You are 'VitalSync Assistant,' a supportive and informational AI health companion. 
-    Your role is to help a user understand their diagnosed health condition: '{user_condition}'.
-    **Your most important rules are:**
-    1.  **NEVER** provide medical advice.
-    2.  **NEVER** suggest, recommend, or mention any specific medications (prescription or over-the-counter), brands, or dosages.
-    3.  **NEVER** diagnose any condition.
-    4.  **ALWAYS** end your response with a clear disclaimer to consult a healthcare professional for any medical advice.
-    5.  You **CAN** explain concepts, symptoms, and general lifestyle/nutrition in relation to their condition.
+    You are 'VitalSync Assistant,' a supportive AI health companion for a user with {user_condition}.
+    **RULES:** NEVER provide medical advice or diagnoses. NEVER mention medications. ALWAYS end with a disclaimer to consult a doctor.
     The user's question is: "{user_message}"
     """
     try:
         response = model.generate_content(prompt)
         ai_reply = response.text
     except Exception:
-        ai_reply = "Sorry, I'm having trouble connecting to my knowledge base right now."
+        ai_reply = "Sorry, I'm having trouble connecting right now."
     return jsonify({'reply': ai_reply})
 
 @main.route('/download_report')
 @login_required
 def download_report():
     report_text = current_user.ai_report or ""
-    # Convert markdown bold to HTML strong tags for the PDF
     report_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', report_text)
-    
     html = render_template('report_pdf.html', user=current_user, report_html=report_html)
     return render_pdf(HTML(string=html))
 
