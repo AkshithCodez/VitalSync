@@ -15,12 +15,15 @@
                 <label for="metric_name">Vital Sign:</label>
                 <select name="metric_name" id="metric_name" required>
                     <option value="Weight">Weight (kg)</option>
+                    <option value="Blood Pressure">Blood Pressure (e.g., 120/80)</option>
                     <option value="Blood Sugar">Blood Sugar (mg/dL)</option>
                     <option value="Heart Rate">Heart Rate (bpm)</option>
                     <option value="Sleep">Sleep (hours)</option>
                 </select>
+
                 <label for="metric_value">Value:</label>
-                <input type="text" name="metric_value" placeholder="e.g., 75.5" required>
+                <input type="text" name="metric_value" placeholder="e.g., 75.5 or 120/80" required>
+                
                 <button type="submit">Log Vital</button>
             </form>
         </div>
@@ -58,6 +61,7 @@
                     <label for="metric-select-chart">View chart for:</label>
                     <select id="metric-select-chart">
                         <option value="Weight">Weight</option>
+                        <option value="Blood Pressure">Blood Pressure</option>
                         <option value="Blood Sugar">Blood Sugar</option>
                         <option value="Heart Rate">Heart Rate</option>
                         <option value="Sleep">Sleep</option>
@@ -104,7 +108,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- Tool Switcher Logic ---
+    // Tool Switcher Logic
     const toolSelect = document.getElementById('tool-select');
     const chartContainer = document.getElementById('chart-container');
     const bmiContainer = document.getElementById('bmi-container');
@@ -118,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- BMI Calculator Logic with Unit Conversion ---
+    // BMI Calculator Logic
     const bmiForm = document.getElementById('bmi-form');
     bmiForm.addEventListener('submit', function(event) {
         event.preventDefault();
@@ -127,19 +131,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const heightUnit = document.getElementById('height-unit').value;
         const weightUnit = document.getElementById('weight-unit').value;
         const bmiResultDiv = document.getElementById('bmi-result');
-
         let heightInMeters = parseFloat(heightInput.value);
         let weightInKg = parseFloat(weightInput.value);
 
-        // Convert units to metric
-        if (heightUnit === 'ft') {
-            heightInMeters = heightInMeters * 0.3048;
-        } else {
-            heightInMeters = heightInMeters / 100;
-        }
-        if (weightUnit === 'lbs') {
-            weightInKg = weightInKg * 0.453592;
-        }
+        if (heightUnit === 'ft') heightInMeters *= 0.3048;
+        else heightInMeters /= 100;
+        if (weightUnit === 'lbs') weightInKg *= 0.453592;
 
         if (heightInMeters > 0 && weightInKg > 0) {
             const bmi = (weightInKg / (heightInMeters * heightInMeters)).toFixed(1);
@@ -154,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- Chart Logic with Reference Ranges ---
+    // Chart Logic
     const ctx = document.getElementById('vitalsChart').getContext('2d');
     let vitalsChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
     const metricSelectChart = document.getElementById('metric-select-chart');
@@ -163,34 +160,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedMetric = metricSelectChart.value;
         const response = await fetch(`/api/vitals_data?metric=${selectedMetric}`);
         const chartData = await response.json();
+        const datasets = chartData.datasets.map(ds => ({ ...ds, tension: 0.1, fill: false }));
 
-        const datasets = [{
-            label: selectedMetric,
-            data: chartData.data,
-            borderColor: '#3182ce',
-            tension: 0.1,
-            fill: false
-        }];
-
-        // Add high/low range lines if they exist
-        if (chartData.ranges.high) {
+        if (chartData.ranges && chartData.ranges.high) {
             datasets.push({
-                label: 'High',
-                data: Array(chartData.labels.length).fill(chartData.ranges.high),
-                borderColor: '#e53e3e', // Red
-                borderDash: [5, 5],
-                pointRadius: 0,
-                fill: false
+                label: 'High Range', data: Array(chartData.labels.length).fill(chartData.ranges.high),
+                borderColor: 'rgba(229, 62, 62, 0.5)', borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 2
             });
         }
-        if (chartData.ranges.low) {
+        if (chartData.ranges && chartData.ranges.low) {
             datasets.push({
-                label: 'Low',
-                data: Array(chartData.labels.length).fill(chartData.ranges.low),
-                borderColor: '#4299e1', // Blue
-                borderDash: [5, 5],
-                pointRadius: 0,
-                fill: false
+                label: 'Low Range', data: Array(chartData.labels.length).fill(chartData.ranges.low),
+                borderColor: 'rgba(66, 153, 225, 0.5)', borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 2
             });
         }
         

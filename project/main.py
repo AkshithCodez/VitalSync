@@ -19,20 +19,7 @@ def generate_report_in_background(user_id):
     with app.app_context():
         user = User.query.get(user_id)
         if user and not user.ai_report and user.condition:
-            prompt = f"""
-            You are a helpful health information assistant. Your goal is to provide a general, supportive summary of a health condition for a user who has already been diagnosed by a doctor.
-
-            **IMPORTANT RULES:**
-            1.  **DO NOT** provide medical advice.
-            2.  **DO NOT** prescribe, mention, or recommend any specific pharmaceutical drugs or medications.
-            3.  You **CAN** suggest common, safe, non-prescription home-remedy-style actions for temporary relief.
-            4.  You **CAN** recommend general vitamins, nutrients, and healthy lifestyle choices.
-            5.  Format all section titles with markdown bolding (e.g., **Section Title**).
-
-            The user's diagnosed condition is: "{user.condition}"
-
-            Please generate a report with four sections: **Understanding Your Condition**, **Potential Consequences**, **Supportive Measures for Comfort**, and **Beneficial Nutrients & Lifestyle**.
-            """
+            prompt = f"Generate a supportive health summary for a user diagnosed with {user.condition}. Include sections on understanding the condition, potential consequences, supportive non-prescription measures, and beneficial nutrients. Do NOT give medical advice or mention specific medications."
             try:
                 response = model.generate_content(prompt)
                 user.ai_report = response.text
@@ -73,24 +60,39 @@ def api_vitals_data():
     
     ranges = {
         "Blood Sugar": {"high": 180, "low": 70},
+        "Blood Pressure": {"high": 130, "low": 90},
         "Heart Rate": {"high": 100, "low": 60},
         "Sleep": {"high": 9, "low": 7},
-        "Weight": {"high": None, "low": None},
     }
     
     labels = [log.date.strftime('%Y-%m-%d') for log in logs]
-    data = []
-    for log in logs:
-        try:
-            # This handles cases like '120/80' by just taking the first number
-            numeric_part = re.split(r'[/ ]', log.metric_value)[0]
-            data.append(float(numeric_part))
-        except (ValueError, TypeError):
-            continue
+    datasets = []
+    
+    if metric == "Blood Pressure":
+        systolic_data = []
+        diastolic_data = []
+        for log in logs:
+            try:
+                parts = re.split(r'[/ ]', log.metric_value)
+                if len(parts) >= 2:
+                    systolic_data.append(float(parts[0]))
+                    diastolic_data.append(float(parts[1]))
+            except (ValueError, TypeError, IndexError):
+                continue
+        datasets.append({'label': 'Systolic', 'data': systolic_data, 'borderColor': '#e53e3e'})
+        datasets.append({'label': 'Diastolic', 'data': diastolic_data, 'borderColor': '#3182ce'})
+    else:
+        data = []
+        for log in logs:
+            try:
+                data.append(float(log.metric_value))
+            except (ValueError, TypeError):
+                continue
+        datasets.append({'label': metric, 'data': data, 'borderColor': '#3182ce'})
 
     return jsonify({
         'labels': labels, 
-        'data': data,
+        'datasets': datasets,
         'ranges': ranges.get(metric, {"high": None, "low": None})
     })
 
@@ -98,12 +100,7 @@ def api_vitals_data():
 @login_required
 def chat():
     user_message = request.json['message']
-    user_condition = current_user.condition
-    prompt = f"""
-    You are 'VitalSync Assistant,' a supportive AI health companion for a user with {user_condition}.
-    **RULES:** NEVER provide medical advice or diagnoses. NEVER mention medications. ALWAYS end with a disclaimer to consult a doctor.
-    The user's question is: "{user_message}"
-    """
+    prompt = f"You are a helpful AI health assistant. A user with {current_user.condition} asks: '{user_message}'. Answer informatively, but DO NOT give medical advice, mention medications, or diagnose. End with a disclaimer to consult a doctor."
     try:
         response = model.generate_content(prompt)
         ai_reply = response.text
