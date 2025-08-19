@@ -48,54 +48,105 @@
 
     <div class="dashboard-column">
         <div class="card-container">
-            <h2>Your Progress</h2>
-            <div class="chart-controls">
-                <label for="metric-select-chart">View chart for:</label>
-                <select id="metric-select-chart">
-                    <option value="Weight">Weight</option>
-                    <option value="Blood Sugar">Blood Sugar</option>
-                    <option value="Heart Rate">Heart Rate</option>
-                    <option value="Pain Level">Pain Level</option>
-                    <option value="Sleep">Sleep</option>
+            <div class="tool-switcher">
+                <label for="tool-select">Select a Tool:</label>
+                <select id="tool-select">
+                    <option value="chart">Progress Chart</option>
+                    <option value="bmi">BMI Calculator</option>
                 </select>
             </div>
-            <canvas id="vitalsChart"></canvas>
+
+            <div id="chart-container">
+                <h2>Your Progress</h2>
+                <div class="chart-controls">
+                    <label for="metric-select-chart">View chart for:</label>
+                    <select id="metric-select-chart">
+                        <option value="Weight">Weight</option>
+                        <option value="Blood Sugar">Blood Sugar</option>
+                        <option value="Heart Rate">Heart Rate</option>
+                        <option value="Pain Level">Pain Level</option>
+                        <option value="Sleep">Sleep</option>
+                    </select>
+                </div>
+                <canvas id="vitalsChart"></canvas>
+            </div>
+
+            <div id="bmi-container" class="hidden">
+                <h2>BMI Calculator</h2>
+                <form id="bmi-form" class="input-form-stacked">
+                    <label for="height">Height (cm):</label>
+                    <input type="number" id="height" placeholder="e.g., 175" required>
+                    <label for="weight">Weight (kg):</label>
+                    <input type="number" id="weight" placeholder="e.g., 75.5" required>
+                    <button type="submit">Calculate BMI</button>
+                </form>
+                <div id="bmi-result" class="bmi-result"></div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const ctx = document.getElementById('vitalsChart').getContext('2d');
-        let vitalsChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Loading...',
-                    data: [],
-                    borderColor: '#3182ce',
-                    tension: 0.1
-                }]
-            }
-        });
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Tool Switcher Logic ---
+    const toolSelect = document.getElementById('tool-select');
+    const chartContainer = document.getElementById('chart-container');
+    const bmiContainer = document.getElementById('bmi-container');
 
-        const metricSelect = document.getElementById('metric-select-chart');
-
-        async function updateChart() {
-            const selectedMetric = metricSelect.value;
-            const response = await fetch(`/api/vitals_data?metric=${selectedMetric}`);
-            const chartData = await response.json();
-
-            vitalsChart.data.labels = chartData.labels;
-            vitalsChart.data.datasets[0].data = chartData.data;
-            vitalsChart.data.datasets[0].label = selectedMetric;
-            vitalsChart.update();
+    toolSelect.addEventListener('change', function() {
+        if (this.value === 'chart') {
+            chartContainer.classList.remove('hidden');
+            bmiContainer.classList.add('hidden');
+        } else if (this.value === 'bmi') {
+            chartContainer.classList.add('hidden');
+            bmiContainer.classList.remove('hidden');
         }
-
-        metricSelect.addEventListener('change', updateChart);
-
-        updateChart();
     });
+
+    // --- BMI Calculator Logic ---
+    const bmiForm = document.getElementById('bmi-form');
+    const heightInput = document.getElementById('height');
+    const weightInput = document.getElementById('weight');
+    const bmiResultDiv = document.getElementById('bmi-result');
+
+    bmiForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const height = parseFloat(heightInput.value) / 100; // Convert cm to meters
+        const weight = parseFloat(weightInput.value);
+
+        if (height > 0 && weight > 0) {
+            const bmi = (weight / (height * height)).toFixed(1);
+            let category = '';
+            if (bmi < 18.5) category = 'Underweight';
+            else if (bmi < 25) category = 'Healthy Weight';
+            else if (bmi < 30) category = 'Overweight';
+            else category = 'Obesity';
+
+            bmiResultDiv.innerHTML = `<h3>Your BMI is: ${bmi}</h3><p>This is considered: <strong>${category}</strong></p>`;
+        } else {
+            bmiResultDiv.innerHTML = `<p style="color: red;">Please enter valid height and weight.</p>`;
+        }
+    });
+
+    // --- Chart Logic ---
+    const ctx = document.getElementById('vitalsChart').getContext('2d');
+    let vitalsChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Loading...', data: [], borderColor: '#3182ce', tension: 0.1 }] }
+    });
+    const metricSelectChart = document.getElementById('metric-select-chart');
+
+    async function updateChart() {
+        const selectedMetric = metricSelectChart.value;
+        const response = await fetch(`/api/vitals_data?metric=${selectedMetric}`);
+        const chartData = await response.json();
+        vitalsChart.data.labels = chartData.labels;
+        vitalsChart.data.datasets[0].data = chartData.data;
+        vitalsChart.data.datasets[0].label = selectedMetric;
+        vitalsChart.update();
+    }
+    metricSelectChart.addEventListener('change', updateChart);
+    updateChart(); // Load initial chart
+});
 </script>
 {% endblock %}

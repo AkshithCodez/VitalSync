@@ -118,3 +118,35 @@ button:disabled { background-color: #a0aec0; cursor: not-allowed; }
 /* --- Utility --- */
 .hidden { display: none !important; }
 .flash-message { padding: 16px; background-color: #fed7d7; color: #c53030; border: 1px solid #fbcfe8; border-radius: 6px; text-align: center; margin-bottom: 20px; }
+
+/* --- Styles for Tool Switcher --- */
+.tool-switcher {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: center;
+}
+.tool-switcher label {
+    margin-right: 10px;
+    font-weight: bold;
+    color: #4a5568;
+}
+.tool-switcher select {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e0;
+    font-size: 16px;
+}
+
+/* --- Styles for BMI Result --- */
+.bmi-result {
+    text-align: center;
+    margin-top: 24px;
+}
+.bmi-result h3 {
+    color: #2c5282;
+    margin-bottom: 8px;
+}
+.bmi-result p {
+    margin-top: 0;
+}
