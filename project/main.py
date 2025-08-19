@@ -1,13 +1,14 @@
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 from flask_login import login_required, current_user
-from .models import PlannerItem, User, VitalsLog
+from .models import PlannerItem, User, VitalsLog, Meal
 from . import db
 import google.generativeai as genai
 import os
 import re
+import requests
 from . import create_app
 from flask_weasyprint import HTML, render_pdf
-from datetime import datetime
+from datetime import datetime, date
 
 main = Blueprint('main', __name__)
 
@@ -27,6 +28,53 @@ def generate_report_in_background(user_id):
             except Exception as e:
                 user.ai_report = f"Sorry, there was an error generating the report. Error: {e}"
                 db.session.commit()
+
+# --- THIS IS THE MISSING HELPER FUNCTION ---
+def get_nutrition_data(food_item):
+    api_key = os.getenv('USDA_API_KEY')
+    calories, protein, carbs, fats = 0, 0, 0, 0
+    if not api_key:
+        print("USDA API KEY not found.")
+        return 0, 0, 0, 0
+
+    try:
+        # Step 1: Search for the food to get its FDC ID
+        search_url = f"https://api.nal.usda.gov/fdc/v1/foods/search?api_key={api_key}&query={food_item}"
+        search_response = requests.get(search_url)
+        search_response.raise_for_status()
+        search_data = search_response.json()
+        
+        if not search_data.get('foods'):
+            return 0, 0, 0, 0
+        
+        fdc_id = search_data['foods'][0]['fdcId']
+
+        # Step 2: Use the FDC ID to get detailed nutrient info
+        details_url = f"https://api.nal.usda.gov/fdc/v1/food/{fdc_id}?api_key={api_key}"
+        details_response = requests.get(details_url)
+        details_response.raise_for_status()
+        details_data = details_response.json()
+
+        for nutrient in details_data.get('foodNutrients', []):
+            if nutrient['nutrient']['id'] == 1008: calories = int(nutrient.get('amount', 0))
+            elif nutrient['nutrient']['id'] == 1003: protein = int(nutrient.get('amount', 0))
+            elif nutrient['nutrient']['id'] == 1005: carbs = int(nutrient.get('amount', 0))
+            elif nutrient['nutrient']['id'] == 1004: fats = int(nutrient.get('amount', 0))
+                
+    except requests.exceptions.RequestException as e:
+        print(f"USDA API Error: {e}")
+
+    return calories, protein, carbs, fats
+
+def add_meal_from_ai(food_item, meal_type):
+    calories, protein, carbs, fats = get_nutrition_data(food_item)
+    new_meal = Meal(
+        meal_type=meal_type, food_item=food_item,
+        calories=calories, protein=protein, carbs=carbs, fats=fats,
+        owner=current_user, date=date.today()
+    )
+    db.session.add(new_meal)
+    db.session.commit()
 
 @main.route('/')
 @login_required
@@ -48,17 +96,26 @@ def assistant():
 @main.route('/yoga')
 @login_required
 def yoga():
-    # The data now points to our local image files
     yoga_asanas = [
-        {'name': 'Downward-Facing Dog (Adho Mukha Svanasana)', 'img': 'downward_dog.jpg', 'desc': 'A foundational pose that calms the brain and energizes the body.'},
-        {'name': 'Warrior II (Virabhadrasana II)', 'img': 'warrior_2.jpg', 'desc': 'Strengthens the legs and ankles while increasing stamina.'},
-        {'name': 'Triangle Pose (Trikonasana)', 'img': 'triangle_pose.jpg', 'desc': 'Stretches the legs, hips, and spine, while stimulating abdominal organs.'},
-        {'name': 'Mountain Pose (Tadasana)', 'img': 'mountain_pose.jpg', 'desc': 'Improves balance, focus, and strengthens the thighs and calves.'},
-        {'name': 'Tree Pose (Vrksasana)', 'img': 'tree_pose.jpg', 'desc': 'Stretches the chest, neck, and spine. Calms the body and mind.'},
-        {'name': 'Cobra Pose (Bhujangasana)', 'img': 'cobra_pose.jpg', 'desc': 'Increases spinal flexibility and strengthens the back muscles.'},
-        {'name': 'Bridge Pose (Setu Bandhasana)', 'img': 'bridge_pose.jpg', 'desc': 'A gentle resting pose that calms the mind and relieves stress.'},
+        {'name': 'Downward-Facing Dog', 'img': 'downward_dog.jpg', 'desc': 'A foundational pose that calms the brain and energizes the body.'},
+        {'name': 'Warrior II', 'img': 'warrior_2.jpg', 'desc': 'Strengthens the legs and ankles while increasing stamina.'},
+        {'name': 'Triangle Pose', 'img': 'triangle_pose.jpg', 'desc': 'Stretches the legs, hips, and spine.'},
+        {'name': 'Tree Pose', 'img': 'tree_pose.jpg', 'desc': 'Improves balance and focus.'},
     ]
     return render_template('yoga.html', user=current_user, asanas=yoga_asanas)
+
+@main.route('/diet')
+@login_required
+def diet():
+    today = date.today()
+    meals = Meal.query.filter_by(owner=current_user, date=today).all()
+    totals = {
+        'calories': sum(m.calories for m in meals),
+        'protein': sum(m.protein for m in meals),
+        'carbs': sum(m.carbs for m in meals),
+        'fats': sum(m.fats for m in meals)
+    }
+    return render_template('diet.html', user=current_user, meals=meals, totals=totals, today=today)
 
 @main.route('/api/events')
 @login_required
@@ -72,28 +129,18 @@ def api_events():
 def api_vitals_data():
     metric = request.args.get('metric', 'Weight')
     logs = VitalsLog.query.filter_by(user_id=current_user.id, metric_name=metric).order_by(VitalsLog.date.asc()).all()
-    
-    ranges = {
-        "Blood Sugar": {"high": 180, "low": 70},
-        "Blood Pressure": {"high": 130, "low": 90},
-        "Heart Rate": {"high": 100, "low": 60},
-        "Sleep": {"high": 9, "low": 7},
-    }
-    
+    ranges = {"Blood Sugar": {"high": 180, "low": 70}, "Blood Pressure": {"high": 130, "low": 90}, "Heart Rate": {"high": 100, "low": 60}}
     labels = [log.date.strftime('%Y-%m-%d') for log in logs]
     datasets = []
-    
     if metric == "Blood Pressure":
-        systolic_data = []
-        diastolic_data = []
+        systolic_data, diastolic_data = [], []
         for log in logs:
             try:
                 parts = re.split(r'[/ ]', log.metric_value)
                 if len(parts) >= 2:
                     systolic_data.append(float(parts[0]))
                     diastolic_data.append(float(parts[1]))
-            except (ValueError, TypeError, IndexError):
-                continue
+            except (ValueError, TypeError, IndexError): continue
         datasets.append({'label': 'Systolic', 'data': systolic_data, 'borderColor': '#e53e3e'})
         datasets.append({'label': 'Diastolic', 'data': diastolic_data, 'borderColor': '#3182ce'})
     else:
@@ -101,15 +148,9 @@ def api_vitals_data():
         for log in logs:
             try:
                 data.append(float(log.metric_value))
-            except (ValueError, TypeError):
-                continue
+            except (ValueError, TypeError): continue
         datasets.append({'label': metric, 'data': data, 'borderColor': '#3182ce'})
-
-    return jsonify({
-        'labels': labels, 
-        'datasets': datasets,
-        'ranges': ranges.get(metric, {"high": None, "low": None})
-    })
+    return jsonify({'labels': labels, 'datasets': datasets, 'ranges': ranges.get(metric, {"high": None, "low": None})})
 
 @main.route('/chat', methods=['POST'])
 @login_required
@@ -137,6 +178,57 @@ def download_planner():
     items = PlannerItem.query.filter_by(user_id=current_user.id).order_by(PlannerItem.appointment_date.asc()).all()
     html = render_template('planner_pdf.html', user=current_user, items=items)
     return render_pdf(HTML(string=html))
+
+@main.route('/generate_meal_plan', methods=['POST'])
+@login_required
+def generate_meal_plan():
+    calories = request.form.get('calories', '2000')
+    diet_pref = request.form.get('diet_pref', 'a balanced')
+    prompt = f"Generate a simple, one-day {diet_pref} meal plan for a user with {current_user.condition}. Total calories around {calories}. List one item for breakfast, lunch, and dinner. Format like: Breakfast: [food]. Lunch: [food]. Dinner: [food]."
+    try:
+        response = model.generate_content(prompt)
+        lines = response.text.split('\n')
+        for line in lines:
+            if "Breakfast:" in line: add_meal_from_ai(line.replace("Breakfast:", "").strip(), "Breakfast")
+            elif "Lunch:" in line: add_meal_from_ai(line.replace("Lunch:", "").strip(), "Lunch")
+            elif "Dinner:" in line: add_meal_from_ai(line.replace("Dinner:", "").strip(), "Dinner")
+    except Exception as e:
+        print(f"Gemini meal plan generation error: {e}")
+    return redirect(url_for('main.diet'))
+
+@main.route('/grocery_list')
+@login_required
+def grocery_list():
+    meals = Meal.query.filter_by(owner=current_user, date=date.today()).all()
+    ingredients = [meal.food_item for meal in meals]
+    if not ingredients:
+        return render_template('grocery_list.html', grocery_list="Your meal plan for today is empty.")
+    prompt = f"Consolidate the following meal items into a simple, categorized grocery list: {', '.join(ingredients)}"
+    try:
+        response = model.generate_content(prompt)
+        grocery_list_text = response.text
+    except Exception as e:
+        grocery_list_text = f"Could not generate grocery list. Error: {e}"
+    return render_template('grocery_list.html', grocery_list=grocery_list_text)
+
+@main.route('/add_meal', methods=['POST'])
+@login_required
+def add_meal():
+    meal_type = request.form.get('meal_type')
+    food_item = request.form.get('food_item')
+    calories, protein, carbs, fats = get_nutrition_data(food_item)
+    new_meal = Meal(meal_type=meal_type, food_item=food_item, calories=calories, protein=protein, carbs=carbs, fats=fats, owner=current_user, date=date.today())
+    db.session.add(new_meal)
+    db.session.commit()
+    return redirect(url_for('main.diet'))
+
+@main.route('/delete_meal/<int:meal_id>')
+@login_required
+def delete_meal(meal_id):
+    meal = Meal.query.filter_by(id=meal_id, user_id=current_user.id).first_or_404()
+    db.session.delete(meal)
+    db.session.commit()
+    return redirect(url_for('main.diet'))
 
 @main.route('/add_item', methods=['POST'])
 @login_required

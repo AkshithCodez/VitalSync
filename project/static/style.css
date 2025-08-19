@@ -295,3 +295,62 @@ body {
     margin-top: 0;
     color: var(--header-color);
 }
+
+/* --- Styles for Diet Planner --- */
+.totals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    text-align: center;
+    margin-bottom: 24px;
+}
+.totals-grid div {
+    background-color: var(--subtle-bg-color);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+.totals-grid span {
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--text-muted-color);
+    margin-bottom: 8px;
+}
+.small-input, .input-form-stacked select {
+    margin-bottom: 12px;
+}
+.button-full-width {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+.meal-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px 0;
+}
+.meal-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+.delete-button-small {
+    color: var(--danger-color);
+    text-decoration: none;
+    font-size: 20px;
+    font-weight: bold;
+    opacity: 0.5;
+}
+.delete-button-small:hover {
+    opacity: 1;
+}
