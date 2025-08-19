@@ -68,6 +68,12 @@
                     </select>
                 </div>
                 <canvas id="vitalsChart"></canvas>
+                <div id="reference-charts-container">
+                    <table class="reference-table hidden" id="sugar-reference-table">
+                        </table>
+                    <table class="reference-table hidden" id="bp-reference-table">
+                        </table>
+                </div>
             </div>
 
             <div id="bmi-container" class="hidden">
@@ -93,14 +99,7 @@
                 </form>
                 <div id="bmi-result" class="bmi-result"></div>
                 <table class="bmi-table">
-                    <thead><tr><th colspan="2">BMI Categories</th></tr></thead>
-                    <tbody>
-                        <tr><td>Below 18.5</td><td>Underweight</td></tr>
-                        <tr><td>18.5 – 24.9</td><td>Healthy Weight</td></tr>
-                        <tr><td>25.0 – 29.9</td><td>Overweight</td></tr>
-                        <tr><td>30.0 and Above</td><td>Obesity</td></tr>
-                    </tbody>
-                </table>
+                    </table>
             </div>
         </div>
     </div>
@@ -108,10 +107,10 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Tool Switcher Logic
     const toolSelect = document.getElementById('tool-select');
     const chartContainer = document.getElementById('chart-container');
     const bmiContainer = document.getElementById('bmi-container');
+
     toolSelect.addEventListener('change', function() {
         if (this.value === 'chart') {
             chartContainer.classList.remove('hidden');
@@ -122,44 +121,64 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // BMI Calculator Logic
+    // --- CORRECTED BMI CALCULATOR LOGIC ---
     const bmiForm = document.getElementById('bmi-form');
-    bmiForm.addEventListener('submit', function(event) {
-        event.preventDefault();
-        const heightInput = document.getElementById('height');
-        const weightInput = document.getElementById('weight');
-        const heightUnit = document.getElementById('height-unit').value;
-        const weightUnit = document.getElementById('weight-unit').value;
-        const bmiResultDiv = document.getElementById('bmi-result');
-        let heightInMeters = parseFloat(heightInput.value);
-        let weightInKg = parseFloat(weightInput.value);
+    
+    // Check if the form exists before adding a listener
+    if (bmiForm) {
+        bmiForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent page reload
 
-        if (heightUnit === 'ft') heightInMeters *= 0.3048;
-        else heightInMeters /= 100;
-        if (weightUnit === 'lbs') weightInKg *= 0.453592;
+            // Get elements inside the event listener to ensure they are found
+            const heightInput = document.getElementById('height');
+            const weightInput = document.getElementById('weight');
+            const heightUnit = document.getElementById('height-unit').value;
+            const weightUnit = document.getElementById('weight-unit').value;
+            const bmiResultDiv = document.getElementById('bmi-result');
 
-        if (heightInMeters > 0 && weightInKg > 0) {
-            const bmi = (weightInKg / (heightInMeters * heightInMeters)).toFixed(1);
-            let category = '';
-            if (bmi < 18.5) category = 'Underweight';
-            else if (bmi < 25) category = 'Healthy Weight';
-            else if (bmi < 30) category = 'Overweight';
-            else category = 'Obesity';
-            bmiResultDiv.innerHTML = `<h3>Your BMI is: ${bmi}</h3><p>Category: <strong>${category}</strong></p>`;
-        } else {
-            bmiResultDiv.innerHTML = `<p style="color: red;">Please enter valid height and weight.</p>`;
-        }
-    });
+            let heightInMeters = parseFloat(heightInput.value);
+            let weightInKg = parseFloat(weightInput.value);
 
-    // Chart Logic
+            // Convert units to metric if necessary
+            if (heightUnit === 'ft') {
+                heightInMeters = heightInMeters * 0.3048; // feet to meters
+            } else {
+                heightInMeters = heightInMeters / 100; // cm to meters
+            }
+            if (weightUnit === 'lbs') {
+                weightInKg = weightInKg * 0.453592; // pounds to kg
+            }
+
+            if (heightInMeters > 0 && weightInKg > 0) {
+                const bmi = (weightInKg / (heightInMeters * heightInMeters)).toFixed(1);
+                let category = '';
+                if (bmi < 18.5) category = 'Underweight';
+                else if (bmi < 25) category = 'Healthy Weight';
+                else if (bmi < 30) category = 'Overweight';
+                else category = 'Obesity';
+                bmiResultDiv.innerHTML = `<h3>Your BMI is: ${bmi}</h3><p>Category: <strong>${category}</strong></p>`;
+            } else {
+                bmiResultDiv.innerHTML = `<p style="color: red;">Please enter valid height and weight.</p>`;
+            }
+        });
+    }
+
+    // --- Chart Logic ---
     const ctx = document.getElementById('vitalsChart').getContext('2d');
     let vitalsChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
     const metricSelectChart = document.getElementById('metric-select-chart');
+    const sugarRefTable = document.getElementById('sugar-reference-table');
+    const bpRefTable = document.getElementById('bp-reference-table');
 
     async function updateChart() {
+        // Hide all reference tables first
+        if(sugarRefTable) sugarRefTable.classList.add('hidden');
+        if(bpRefTable) bpRefTable.classList.add('hidden');
+
         const selectedMetric = metricSelectChart.value;
         const response = await fetch(`/api/vitals_data?metric=${selectedMetric}`);
         const chartData = await response.json();
+        
         const datasets = chartData.datasets.map(ds => ({ ...ds, tension: 0.1, fill: false }));
 
         if (chartData.ranges && chartData.ranges.high) {
@@ -178,9 +197,17 @@ document.addEventListener('DOMContentLoaded', function() {
         vitalsChart.data.labels = chartData.labels;
         vitalsChart.data.datasets = datasets;
         vitalsChart.update();
+
+        // Show the correct reference table after updating chart
+        if (selectedMetric === 'Blood Sugar' && sugarRefTable) {
+            sugarRefTable.classList.remove('hidden');
+        } else if (selectedMetric === 'Blood Pressure' && bpRefTable) {
+            bpRefTable.classList.remove('hidden');
+        }
     }
+    
     metricSelectChart.addEventListener('change', updateChart);
-    updateChart();
+    updateChart(); // Load initial chart
 });
 </script>
 {% endblock %}
