@@ -19,6 +19,7 @@ This project requires API keys to function. You must create a `.env` file to sto
 In the main project root folder (at the same level as the `project` and `venv` folders), create a new file named exactly **`.env`**. Add your keys to this file in the following format, replacing the placeholder text:
 
 GEMINI_API_KEY="YOUR_GEMINI_API_KEY_HERE"
+<br>
 USDA_API_KEY="YOUR_USDA_KEY_HERE"
 
 ## 🚀 Running the Application
