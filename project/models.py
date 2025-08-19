@@ -38,4 +38,5 @@ class Meal(db.Model):
     protein = db.Column(db.Integer, default=0)
     carbs = db.Column(db.Integer, default=0)
     fats = db.Column(db.Integer, default=0)
+    is_eaten = db.Column(db.Boolean, default=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)

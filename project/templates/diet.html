@@ -11,6 +11,7 @@
     <div class="dashboard-column">
         <div class="card-container">
             <h2>AI Meal Plan Generator</h2>
+            <p>Generate a new plan for today. Warning: This will replace any existing items for today's date.</p>
             <form action="{{ url_for('main.generate_meal_plan') }}" method="POST" class="input-form-stacked">
                 <label for="calories">Target Calories:</label>
                 <input type="number" name="calories" value="2000" class="small-input">
@@ -25,7 +26,7 @@
             </form>
         </div>
         <div class="card-container">
-            <h2>Today's Totals</h2>
+            <h2>Today's Totals (from eaten items)</h2>
             <div class="totals-grid">
                 <div><span>Calories</span>{{ totals.calories }} kcal</div>
                 <div><span>Protein</span>{{ totals.protein }} g</div>
@@ -40,17 +41,29 @@
         {% for meal_type in ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] %}
         <div class="card-container">
             <h2>{{ meal_type }}</h2>
-            <ul class="meal-list">
-                {% for meal in meals if meal.meal_type == meal_type %}
-                <li>
-                    <span>{{ meal.food_item }} ({{ meal.calories }} kcal)</span>
-                    <a href="{{ url_for('main.delete_meal', meal_id=meal.id) }}" class="delete-button-small">×</a>
-                </li>
-                {% endfor %}
+            <ul class="task-list">
+                {% set meals_for_type = meals|selectattr('meal_type', 'equalto', meal_type)|list %}
+                {% if meals_for_type %}
+                    {% for meal in meals_for_type %}
+                    <li class="{% if meal.is_eaten %}done{% endif %}">
+                        <a href="{{ url_for('main.toggle_meal', meal_id=meal.id) }}" class="task-content">
+                            <span class="checkbox"></span>
+                            <div class="meal-item-text">
+                                <span>{{ meal.food_item }}</span>
+                                <small>{{ meal.calories }} kcal | P: {{meal.protein}}g, C: {{meal.carbs}}g, F: {{meal.fats}}g</small>
+                            </div>
+                        </a>
+                        <a href="{{ url_for('main.delete_meal', meal_id=meal.id) }}" class="delete-button-small">×</a>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                     <p class="empty-state">No items planned for {{ meal_type }}.</p>
+                {% endif %}
             </ul>
-            <form action="{{ url_for('main.add_meal') }}" method="POST" class="input-form">
+            <form action="{{ url_for('main.add_meal') }}" method="POST" class="input-form-stacked" style="margin-top: 24px;">
                 <input type="hidden" name="meal_type" value="{{ meal_type }}">
-                <input type="text" name="food_item" placeholder="e.g., 1 large apple" required>
+                <label for="food-item-{{ meal_type }}">Add a food item to {{meal_type}}:</label>
+                <input type="text" name="food_item" id="food-item-{{ meal_type }}" placeholder="e.g., 1 large apple" required>
                 <button type="submit">Add Food</button>
             </form>
         </div>

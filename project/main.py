@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash
 from flask_login import login_required, current_user
 from .models import PlannerItem, User, VitalsLog, Meal
 from . import db
@@ -6,6 +6,7 @@ import google.generativeai as genai
 import os
 import re
 import requests
+import json
 from . import create_app
 from flask_weasyprint import HTML, render_pdf
 from datetime import datetime, date
@@ -55,11 +56,14 @@ def get_nutrition_data(food_item):
         print(f"USDA API Error: {e}")
     return calories, protein, carbs, fats
 
-def add_meal_from_ai(food_item, meal_type):
+def add_meal_from_ai(food_item, meal_type, user):
     calories, protein, carbs, fats = get_nutrition_data(food_item)
-    new_meal = Meal(meal_type=meal_type, food_item=food_item, calories=calories, protein=protein, carbs=carbs, fats=fats, owner=current_user, date=date.today())
+    new_meal = Meal(
+        meal_type=meal_type, food_item=food_item,
+        calories=calories, protein=protein, carbs=carbs, fats=fats,
+        owner=user, date=date.today(), is_eaten=False
+    )
     db.session.add(new_meal)
-    db.session.commit()
 
 @main.route('/')
 @login_required
@@ -83,7 +87,12 @@ def assistant():
 def diet():
     today = date.today()
     meals = Meal.query.filter_by(owner=current_user, date=today).all()
-    totals = {'calories': sum(m.calories for m in meals), 'protein': sum(m.protein for m in meals), 'carbs': sum(m.carbs for m in meals), 'fats': sum(m.fats for m in meals)}
+    totals = {
+        'calories': sum(m.calories for m in meals if m.is_eaten),
+        'protein': sum(m.protein for m in meals if m.is_eaten),
+        'carbs': sum(m.carbs for m in meals if m.is_eaten),
+        'fats': sum(m.fats for m in meals if m.is_eaten)
+    }
     return render_template('diet.html', user=current_user, meals=meals, totals=totals, today=today)
 
 @main.route('/api/events')
@@ -115,8 +124,7 @@ def api_vitals_data():
     else:
         data = []
         for log in logs:
-            try:
-                data.append(float(log.metric_value))
+            try: data.append(float(log.metric_value))
             except (ValueError, TypeError): continue
         datasets.append({'label': metric, 'data': data, 'borderColor': '#3182ce'})
     return jsonify({'labels': labels, 'datasets': datasets, 'ranges': ranges.get(metric, {"high": None, "low": None})})
@@ -151,20 +159,35 @@ def download_planner():
 @main.route('/generate_meal_plan', methods=['POST'])
 @login_required
 def generate_meal_plan():
+    Meal.query.filter_by(owner=current_user, date=date.today()).delete()
     calories = request.form.get('calories', '2000')
     diet_pref = request.form.get('diet_pref', 'a balanced')
-    prompt = f"Generate a simple, one-day {diet_pref} meal plan for a user with {current_user.condition}. Total calories around {calories}. List one item for breakfast, lunch, and dinner. Format like: Breakfast: [food]. Lunch: [food]. Dinner: [food]."
+    prompt = f"""
+    Generate a simple, one-day {diet_pref} meal plan for a user with {current_user.condition}.
+    The total calories should be around {calories}.
+    Your response MUST be a valid JSON object. Do not include markdown backticks.
+    The format should be:
+    {{
+      "Breakfast": ["item 1", "item 2"],
+      "Lunch": ["item 1", "item 2"],
+      "Dinner": ["item 1", "item 2"]
+    }}
+    """
     try:
-        Meal.query.filter_by(owner=current_user, date=date.today()).delete()
-        db.session.commit()
+        print("--- Sending meal plan prompt to AI... ---")
         response = model.generate_content(prompt)
-        lines = response.text.split('\n')
-        for line in lines:
-            if "Breakfast:" in line: add_meal_from_ai(line.replace("Breakfast:", "").strip(), "Breakfast")
-            elif "Lunch:" in line: add_meal_from_ai(line.replace("Lunch:", "").strip(), "Lunch")
-            elif "Dinner:" in line: add_meal_from_ai(line.replace("Dinner:", "").strip(), "Dinner")
+        cleaned_text = response.text.strip()
+        print(f"--- AI Response Received:\n{cleaned_text}\n---")
+        meal_plan = json.loads(cleaned_text)
+        for meal_type, food_items in meal_plan.items():
+            for item in food_items:
+                add_meal_from_ai(item, meal_type, current_user)
+        db.session.commit()
+        print("--- Meal plan successfully parsed and saved. ---")
     except Exception as e:
-        print(f"Gemini meal plan generation error: {e}")
+        db.session.rollback()
+        print(f"!!! MEAL PLAN GENERATION FAILED: {e} !!!")
+        flash("Sorry, there was an error generating the meal plan. Please try again.")
     return redirect(url_for('main.diet'))
 
 @main.route('/grocery_list')
@@ -198,6 +221,14 @@ def add_meal():
 def delete_meal(meal_id):
     meal = Meal.query.filter_by(id=meal_id, user_id=current_user.id).first_or_404()
     db.session.delete(meal)
+    db.session.commit()
+    return redirect(url_for('main.diet'))
+
+@main.route('/toggle_meal/<int:meal_id>')
+@login_required
+def toggle_meal(meal_id):
+    meal = Meal.query.filter_by(id=meal_id, user_id=current_user.id).first_or_404()
+    meal.is_eaten = not meal.is_eaten
     db.session.commit()
     return redirect(url_for('main.diet'))
 

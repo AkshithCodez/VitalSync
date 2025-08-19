@@ -249,6 +249,12 @@ button:hover { transform: translateY(-2px); box-shadow: 0 8px 32px hsla(var(--hu
 .delete-button { color: var(--text-muted-color); font-size: 24px; font-weight: bold; text-decoration: none; padding: 0 16px; opacity: 0.7; }
 .delete-button:hover { opacity: 1; color: var(--danger-color); }
 .empty-state { text-align: center; color: var(--text-muted-color); padding: 20px 0; }
+.meal-item-text { display: flex; flex-direction: column; }
+.meal-item-text small { font-size: 0.8rem; color: var(--text-muted-color); }
+.task-list li .checkbox { width: 20px; height: 20px; border: 2px solid var(--border-color); border-radius: 4px; margin-right: 12px; transition: all 0.2s; }
+.task-list li.done .task-content { color: var(--text-muted-color); text-decoration: line-through; }
+.task-list li.done .checkbox { background-image: var(--primary-color); border-color: transparent; position: relative; }
+.task-list li.done .checkbox::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 3px 3px 0; transform: rotate(45deg); }
 
 /* --- AI Report, Calendar, Chart, BMI --- */
 .report-content pre { white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 1rem; line-height: 1.7; color: var(--text-color); background-color: var(--subtle-bg-color); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); }
@@ -291,15 +297,3 @@ input:checked + .slider:before { transform: translateX(26px); }
 /* --- Utility & Flash Messages --- */
 .hidden { display: none !important; }
 .flash-message { padding: 20px 24px; background: var(--flash-bg-color); color: var(--flash-text-color); border: 1px solid var(--flash-border-color); border-radius: 16px; text-align: center; margin-bottom: 24px; font-weight: 500; }
-
-/* --- Styles for Yoga Page --- */
-.yoga-layout { display: flex; flex-wrap: wrap; gap: 24px; }
-.asana-list { flex: 1; min-width: 200px; border-right: 1px solid var(--border-color); padding-right: 24px; }
-.asana-list h4 { margin-top: 0; font-size: 18px; background: var(--header-color); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.asana-list ul { list-style-type: none; padding: 0; margin: 0; }
-.asana-list a { display: block; padding: 10px; text-decoration: none; color: var(--text-color); border-radius: 6px; margin-bottom: 4px; font-weight: 500; }
-.asana-list a:hover { background-color: var(--subtle-bg-color); }
-.asana-list a.active { background: var(--primary-color); color: white; font-weight: bold; }
-.asana-display { flex: 3; min-width: 300px; text-align: center; }
-.asana-display img { width: 100%; max-width: 400px; height: auto; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px; }
-.asana-display h3 { margin-top: 0; background: var(--header-color); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
