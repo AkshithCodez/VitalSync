@@ -45,6 +45,21 @@ def tracking():
 def assistant():
     return render_template('assistant.html', user=current_user)
 
+@main.route('/yoga')
+@login_required
+def yoga():
+    # The data now points to our local image files
+    yoga_asanas = [
+        {'name': 'Downward-Facing Dog (Adho Mukha Svanasana)', 'img': 'downward_dog.jpg', 'desc': 'A foundational pose that calms the brain and energizes the body.'},
+        {'name': 'Warrior II (Virabhadrasana II)', 'img': 'warrior_2.jpg', 'desc': 'Strengthens the legs and ankles while increasing stamina.'},
+        {'name': 'Triangle Pose (Trikonasana)', 'img': 'triangle_pose.jpg', 'desc': 'Stretches the legs, hips, and spine, while stimulating abdominal organs.'},
+        {'name': 'Mountain Pose (Tadasana)', 'img': 'mountain_pose.jpg', 'desc': 'Improves balance, focus, and strengthens the thighs and calves.'},
+        {'name': 'Tree Pose (Vrksasana)', 'img': 'tree_pose.jpg', 'desc': 'Stretches the chest, neck, and spine. Calms the body and mind.'},
+        {'name': 'Cobra Pose (Bhujangasana)', 'img': 'cobra_pose.jpg', 'desc': 'Increases spinal flexibility and strengthens the back muscles.'},
+        {'name': 'Bridge Pose (Setu Bandhasana)', 'img': 'bridge_pose.jpg', 'desc': 'A gentle resting pose that calms the mind and relieves stress.'},
+    ]
+    return render_template('yoga.html', user=current_user, asanas=yoga_asanas)
+
 @main.route('/api/events')
 @login_required
 def api_events():

@@ -180,3 +180,118 @@ input:checked + .slider:before { transform: translateX(26px); }
 .reference-table .high-row {
     background-color: var(--high-row-bg);
 }
+
+/* --- Base and Navigation --- */
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    transition: background-color 0.2s, color 0.2s;
+}
+.navbar {
+    background-color: var(--nav-bg-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex; justify-content: space-between; align-items: center;
+    position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; height: 60px; z-index: 100;
+}
+.nav-brand { font-size: 24px; font-weight: bold; color: var(--header-color); text-decoration: none; }
+.nav-links { display: flex; align-items: center; }
+.nav-links a { color: var(--primary-color); text-decoration: none; font-weight: bold; margin-left: 20px; }
+.nav-links span { color: var(--text-muted-color); margin-left: 20px; }
+.content { padding: 80px 20px 20px 20px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
+
+/* --- Dashboard Layout & Headers --- */
+.dashboard-layout { display: flex; flex-wrap: wrap; gap: 24px; width: 100%; max-width: 1200px; align-items: flex-start; }
+.dashboard-column { flex: 1; min-width: 400px; display: flex; flex-direction: column; gap: 24px; }
+.dashboard-layout-single { width: 100%; max-width: 800px; }
+.welcome-header { width: 100%; max-width: 1200px; text-align: center; color: var(--text-muted-color); margin-bottom: 12px; }
+/* ... (rest of CSS is the same) ... */
+
+/* --- Styles for Yoga Page --- */
+.yoga-selector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+}
+.yoga-selector label {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-muted-color);
+}
+.yoga-selector select {
+    font-size: 16px;
+    padding: 12px;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 8px;
+}
+
+/* --- Styles for Yoga Page --- */
+.yoga-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.asana-list {
+    flex: 1;
+    min-width: 200px;
+    border-right: 1px solid var(--border-color);
+    padding-right: 24px;
+}
+
+.asana-list h4 {
+    margin-top: 0;
+    font-size: 18px;
+    color: var(--header-color);
+}
+
+.asana-list ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.asana-list a {
+    display: block;
+    padding: 10px;
+    text-decoration: none;
+    color: var(--text-color);
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+.asana-list a:hover {
+    background-color: var(--subtle-bg-color);
+}
+
+.asana-list a.active {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+}
+
+.asana-display {
+    flex: 3;
+    min-width: 300px;
+    text-align: center;
+}
+
+.asana-display img {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 16px;
+}
+
+.asana-display h3 {
+    margin-top: 0;
+    color: var(--header-color);
+}
