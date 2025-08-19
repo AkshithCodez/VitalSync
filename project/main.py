@@ -10,15 +10,16 @@ from datetime import datetime
 
 main = Blueprint('main', __name__)
 
+# ... (AI config and background function are unchanged) ...
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
-
 def generate_report_in_background(user_id):
+    # This function is the same as before
     app = create_app()
     with app.app_context():
         user = User.query.get(user_id)
         if user and not user.ai_report and user.condition:
-            prompt = f"Generate a supportive health summary for a user diagnosed with {user.condition}. Include sections on understanding the condition, potential consequences, supportive non-prescription measures, and beneficial nutrients. Do NOT give medical advice or mention specific medications."
+            prompt = f"Generate a supportive health summary for a user with {user.condition}. Include sections on understanding the condition, consequences, supportive non-prescription measures, and beneficial nutrients. DO NOT give medical advice or mention medications."
             try:
                 response = model.generate_content(prompt)
                 user.ai_report = response.text
@@ -39,6 +40,12 @@ def tracking():
     vitals = VitalsLog.query.filter_by(user_id=current_user.id).order_by(VitalsLog.date.desc()).all()
     return render_template('tracking.html', user=current_user, vitals=vitals)
 
+# --- NEW PAGE for AI Features ---
+@main.route('/assistant')
+@login_required
+def assistant():
+    return render_template('assistant.html', user=current_user)
+
 @main.route('/api/events')
 @login_required
 def api_events():
@@ -51,16 +58,8 @@ def api_events():
 def api_vitals_data():
     metric = request.args.get('metric', 'Weight')
     logs = VitalsLog.query.filter_by(user_id=current_user.id, metric_name=metric).order_by(VitalsLog.date.asc()).all()
-    
     labels = [log.date.strftime('%Y-%m-%d') for log in logs]
-    # Handle non-numeric data gracefully for charting
-    data = []
-    for log in logs:
-        try:
-            data.append(float(log.metric_value))
-        except (ValueError, TypeError):
-            continue # Skip non-numeric values
-
+    data = [float(log.metric_value) for log in logs if log.metric_value.replace('.', '', 1).isdigit()]
     return jsonify({'labels': labels, 'data': data})
 
 @main.route('/chat', methods=['POST'])
