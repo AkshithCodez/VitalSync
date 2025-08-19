@@ -19,7 +19,7 @@ def generate_report_in_background(user_id):
     with app.app_context():
         user = User.query.get(user_id)
         if user and not user.ai_report and user.condition:
-            prompt = f"Generate a supportive health summary for a user diagnosed with {user.condition}. Include sections on understanding the condition, potential consequences, supportive non-prescription measures, and beneficial nutrients. Do NOT give medical advice or mention specific medications."
+            prompt = f"Generate a supportive health summary for a user diagnosed with {user.condition}. Include sections on understanding the condition, potential consequences, supportive non-prescription measures, and beneficial nutrients. Do NOT give medical advice or mention specific medications. Format section titles with markdown bolding (e.g., **Title**)."
             try:
                 response = model.generate_content(prompt)
                 user.ai_report = response.text
@@ -100,7 +100,7 @@ def api_vitals_data():
 @login_required
 def chat():
     user_message = request.json['message']
-    prompt = f"You are a helpful AI health assistant. A user with {current_user.condition} asks: '{user_message}'. Answer informatively, but DO NOT give medical advice, mention medications, or diagnose. End with a disclaimer to consult a doctor."
+    prompt = f"You are 'VitalSync Assistant,' a supportive AI health companion for a user with {current_user.condition}. **RULES:** NEVER provide medical advice or diagnoses. NEVER mention medications. ALWAYS end with a disclaimer to consult a doctor. The user's question is: '{user_message}'"
     try:
         response = model.generate_content(prompt)
         ai_reply = response.text

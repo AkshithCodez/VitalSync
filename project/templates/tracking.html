@@ -20,10 +20,8 @@
                     <option value="Heart Rate">Heart Rate (bpm)</option>
                     <option value="Sleep">Sleep (hours)</option>
                 </select>
-
                 <label for="metric_value">Value:</label>
                 <input type="text" name="metric_value" placeholder="e.g., 75.5 or 120/80" required>
-                
                 <button type="submit">Log Vital</button>
             </form>
         </div>
@@ -44,7 +42,6 @@
             </ul>
         </div>
     </div>
-
     <div class="dashboard-column">
         <div class="card-container">
             <div class="tool-switcher">
@@ -54,7 +51,6 @@
                     <option value="bmi">BMI Calculator</option>
                 </select>
             </div>
-
             <div id="chart-container">
                 <h2>Your Progress</h2>
                 <div class="chart-controls">
@@ -70,12 +66,26 @@
                 <canvas id="vitalsChart"></canvas>
                 <div id="reference-charts-container">
                     <table class="reference-table hidden" id="sugar-reference-table">
-                        </table>
+                        <thead><tr><th colspan="4">Blood Glucose Chart (mg/dL)</th></tr></thead>
+                        <tbody>
+                            <tr class="header-row"><td></td><td>Fasting</td><td>After Eating</td><td>2-3 Hours After</td></tr>
+                            <tr class="normal-row"><td>Normal</td><td>80-100</td><td>170-200</td><td>120-140</td></tr>
+                            <tr class="impaired-row"><td>Impaired</td><td>101-125</td><td>190-230</td><td>140-160</td></tr>
+                            <tr class="high-row"><td>Diabetic</td><td>126+</td><td>220-300</td><td>200+</td></tr>
+                        </tbody>
+                    </table>
                     <table class="reference-table hidden" id="bp-reference-table">
-                        </table>
+                        <thead><tr><th colspan="3">Blood Pressure Chart (mmHg)</th></tr></thead>
+                        <tbody>
+                            <tr class="header-row"><td>Category</td><td>Systolic (Top #)</td><td>Diastolic (Bottom #)</td></tr>
+                            <tr class="normal-row"><td>Normal</td><td>Less than 120</td><td>Less than 80</td></tr>
+                            <tr class="impaired-row"><td>Elevated</td><td>120 – 129</td><td>Less than 80</td></tr>
+                            <tr class="high-row"><td>Hypertension Stage 1</td><td>130 – 139</td><td>80 – 89</td></tr>
+                            <tr class="high-row"><td>Hypertension Stage 2</td><td>140 or higher</td><td>90 or higher</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-
             <div id="bmi-container" class="hidden">
                 <h2>BMI Calculator</h2>
                 <form id="bmi-form" class="input-form-stacked">
@@ -99,7 +109,14 @@
                 </form>
                 <div id="bmi-result" class="bmi-result"></div>
                 <table class="bmi-table">
-                    </table>
+                    <thead><tr><th colspan="2">BMI Categories</th></tr></thead>
+                    <tbody>
+                        <tr><td>Below 18.5</td><td>Underweight</td></tr>
+                        <tr><td>18.5 – 24.9</td><td>Healthy Weight</td></tr>
+                        <tr><td>25.0 – 29.9</td><td>Overweight</td></tr>
+                        <tr><td>30.0 and Above</td><td>Obesity</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -110,44 +127,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const toolSelect = document.getElementById('tool-select');
     const chartContainer = document.getElementById('chart-container');
     const bmiContainer = document.getElementById('bmi-container');
+    if(toolSelect) {
+        toolSelect.addEventListener('change', function() {
+            if (this.value === 'chart') {
+                chartContainer.classList.remove('hidden');
+                bmiContainer.classList.add('hidden');
+            } else if (this.value === 'bmi') {
+                chartContainer.classList.add('hidden');
+                bmiContainer.classList.remove('hidden');
+            }
+        });
+    }
 
-    toolSelect.addEventListener('change', function() {
-        if (this.value === 'chart') {
-            chartContainer.classList.remove('hidden');
-            bmiContainer.classList.add('hidden');
-        } else if (this.value === 'bmi') {
-            chartContainer.classList.add('hidden');
-            bmiContainer.classList.remove('hidden');
-        }
-    });
-
-    // --- CORRECTED BMI CALCULATOR LOGIC ---
     const bmiForm = document.getElementById('bmi-form');
-    
-    // Check if the form exists before adding a listener
-    if (bmiForm) {
+    if(bmiForm) {
         bmiForm.addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent page reload
-
-            // Get elements inside the event listener to ensure they are found
+            event.preventDefault();
             const heightInput = document.getElementById('height');
             const weightInput = document.getElementById('weight');
             const heightUnit = document.getElementById('height-unit').value;
             const weightUnit = document.getElementById('weight-unit').value;
             const bmiResultDiv = document.getElementById('bmi-result');
-
             let heightInMeters = parseFloat(heightInput.value);
             let weightInKg = parseFloat(weightInput.value);
 
-            // Convert units to metric if necessary
-            if (heightUnit === 'ft') {
-                heightInMeters = heightInMeters * 0.3048; // feet to meters
-            } else {
-                heightInMeters = heightInMeters / 100; // cm to meters
-            }
-            if (weightUnit === 'lbs') {
-                weightInKg = weightInKg * 0.453592; // pounds to kg
-            }
+            if (heightUnit === 'ft') heightInMeters *= 0.3048;
+            else heightInMeters /= 100;
+            if (weightUnit === 'lbs') weightInKg *= 0.453592;
 
             if (heightInMeters > 0 && weightInKg > 0) {
                 const bmi = (weightInKg / (heightInMeters * heightInMeters)).toFixed(1);
@@ -163,51 +169,49 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- Chart Logic ---
-    const ctx = document.getElementById('vitalsChart').getContext('2d');
-    let vitalsChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
-    const metricSelectChart = document.getElementById('metric-select-chart');
-    const sugarRefTable = document.getElementById('sugar-reference-table');
-    const bpRefTable = document.getElementById('bp-reference-table');
+    const vitalsChartCanvas = document.getElementById('vitalsChart');
+    if (vitalsChartCanvas) {
+        const ctx = vitalsChartCanvas.getContext('2d');
+        let vitalsChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
+        const metricSelectChart = document.getElementById('metric-select-chart');
+        const sugarRefTable = document.getElementById('sugar-reference-table');
+        const bpRefTable = document.getElementById('bp-reference-table');
 
-    async function updateChart() {
-        // Hide all reference tables first
-        if(sugarRefTable) sugarRefTable.classList.add('hidden');
-        if(bpRefTable) bpRefTable.classList.add('hidden');
+        async function updateChart() {
+            if(sugarRefTable) sugarRefTable.classList.add('hidden');
+            if(bpRefTable) bpRefTable.classList.add('hidden');
 
-        const selectedMetric = metricSelectChart.value;
-        const response = await fetch(`/api/vitals_data?metric=${selectedMetric}`);
-        const chartData = await response.json();
-        
-        const datasets = chartData.datasets.map(ds => ({ ...ds, tension: 0.1, fill: false }));
+            const selectedMetric = metricSelectChart.value;
+            const response = await fetch(`/api/vitals_data?metric=${selectedMetric}`);
+            const chartData = await response.json();
+            const datasets = chartData.datasets.map(ds => ({ ...ds, tension: 0.1, fill: false }));
 
-        if (chartData.ranges && chartData.ranges.high) {
-            datasets.push({
-                label: 'High Range', data: Array(chartData.labels.length).fill(chartData.ranges.high),
-                borderColor: 'rgba(229, 62, 62, 0.5)', borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 2
-            });
+            if (chartData.ranges && chartData.ranges.high) {
+                datasets.push({
+                    label: 'High Range', data: Array(chartData.labels.length).fill(chartData.ranges.high),
+                    borderColor: 'rgba(229, 62, 62, 0.5)', borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 2
+                });
+            }
+            if (chartData.ranges && chartData.ranges.low) {
+                datasets.push({
+                    label: 'Low Range', data: Array(chartData.labels.length).fill(chartData.ranges.low),
+                    borderColor: 'rgba(66, 153, 225, 0.5)', borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 2
+                });
+            }
+            
+            vitalsChart.data.labels = chartData.labels;
+            vitalsChart.data.datasets = datasets;
+            vitalsChart.update();
+
+            if (selectedMetric === 'Blood Sugar' && sugarRefTable) {
+                sugarRefTable.classList.remove('hidden');
+            } else if (selectedMetric === 'Blood Pressure' && bpRefTable) {
+                bpRefTable.classList.remove('hidden');
+            }
         }
-        if (chartData.ranges && chartData.ranges.low) {
-            datasets.push({
-                label: 'Low Range', data: Array(chartData.labels.length).fill(chartData.ranges.low),
-                borderColor: 'rgba(66, 153, 225, 0.5)', borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 2
-            });
-        }
-        
-        vitalsChart.data.labels = chartData.labels;
-        vitalsChart.data.datasets = datasets;
-        vitalsChart.update();
-
-        // Show the correct reference table after updating chart
-        if (selectedMetric === 'Blood Sugar' && sugarRefTable) {
-            sugarRefTable.classList.remove('hidden');
-        } else if (selectedMetric === 'Blood Pressure' && bpRefTable) {
-            bpRefTable.classList.remove('hidden');
-        }
+        metricSelectChart.addEventListener('change', updateChart);
+        updateChart();
     }
-    
-    metricSelectChart.addEventListener('change', updateChart);
-    updateChart(); // Load initial chart
 });
 </script>
 {% endblock %}
