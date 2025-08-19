@@ -4,6 +4,7 @@ from .models import PlannerItem, User, VitalsLog
 from . import db
 import google.generativeai as genai
 import os
+import re # Import for text replacement
 from . import create_app
 from flask_weasyprint import HTML, render_pdf
 from datetime import datetime
@@ -100,7 +101,11 @@ def chat():
 @main.route('/download_report')
 @login_required
 def download_report():
-    html = render_template('report_pdf.html', user=current_user)
+    report_text = current_user.ai_report or ""
+    # Convert markdown bold to HTML strong tags for the PDF
+    report_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', report_text)
+    
+    html = render_template('report_pdf.html', user=current_user, report_html=report_html)
     return render_pdf(HTML(string=html))
 
 @main.route('/download_planner')
