@@ -44,6 +44,16 @@
 </div>
 
 <script>
+    // --- SCRIPT TO BOLD REPORT TITLES ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const reportElement = document.querySelector('.report-content pre');
+        if (reportElement) {
+            // Find text between ** and replace it with <strong> tags
+            reportElement.innerHTML = reportElement.innerHTML.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        }
+    });
+
+    // --- Chatbot Script ---
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
     const chatWindow = document.getElementById('chat-window');

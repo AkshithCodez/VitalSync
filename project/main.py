@@ -10,16 +10,29 @@ from datetime import datetime
 
 main = Blueprint('main', __name__)
 
-# ... (AI config and background function are unchanged) ...
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
+
 def generate_report_in_background(user_id):
-    # This function is the same as before
     app = create_app()
     with app.app_context():
         user = User.query.get(user_id)
         if user and not user.ai_report and user.condition:
-            prompt = f"Generate a supportive health summary for a user with {user.condition}. Include sections on understanding the condition, consequences, supportive non-prescription measures, and beneficial nutrients. DO NOT give medical advice or mention medications."
+            prompt = f"""
+            You are a helpful health information assistant. Your goal is to provide a general, supportive summary of a health condition for a user who has already been diagnosed by a doctor.
+
+            **IMPORTANT RULES:**
+            1.  **DO NOT** provide medical advice.
+            2.  **DO NOT** prescribe, mention, or recommend any specific pharmaceutical drugs or medications.
+            3.  You **CAN** suggest common, safe, non-prescription home-remedy-style actions for temporary relief.
+            4.  You **CAN** recommend general vitamins, nutrients, and healthy lifestyle choices.
+            5.  Use simple, clear, and encouraging language.
+            6.  **Format all section titles with markdown bolding (e.g., **Section Title**).**
+
+            The user's diagnosed condition is: "{user.condition}"
+
+            Please generate a report with the following sections: **Understanding Your Condition**, **Potential Consequences**, **Supportive Measures for Comfort**, and **Beneficial Nutrients & Lifestyle**.
+            """
             try:
                 response = model.generate_content(prompt)
                 user.ai_report = response.text
@@ -40,7 +53,6 @@ def tracking():
     vitals = VitalsLog.query.filter_by(user_id=current_user.id).order_by(VitalsLog.date.desc()).all()
     return render_template('tracking.html', user=current_user, vitals=vitals)
 
-# --- NEW PAGE for AI Features ---
 @main.route('/assistant')
 @login_required
 def assistant():
@@ -66,12 +78,23 @@ def api_vitals_data():
 @login_required
 def chat():
     user_message = request.json['message']
-    prompt = f"You are a helpful AI health assistant. A user with {current_user.condition} asks: '{user_message}'. Answer informatively, but DO NOT give medical advice, mention medications, or diagnose. End with a disclaimer to consult a doctor."
+    user_condition = current_user.condition
+    prompt = f"""
+    You are 'VitalSync Assistant,' a supportive and informational AI health companion. 
+    Your role is to help a user understand their diagnosed health condition: '{user_condition}'.
+    **Your most important rules are:**
+    1.  **NEVER** provide medical advice.
+    2.  **NEVER** suggest, recommend, or mention any specific medications (prescription or over-the-counter), brands, or dosages.
+    3.  **NEVER** diagnose any condition.
+    4.  **ALWAYS** end your response with a clear disclaimer to consult a healthcare professional for any medical advice.
+    5.  You **CAN** explain concepts, symptoms, and general lifestyle/nutrition in relation to their condition.
+    The user's question is: "{user_message}"
+    """
     try:
         response = model.generate_content(prompt)
         ai_reply = response.text
     except Exception:
-        ai_reply = "Sorry, I'm having trouble connecting right now."
+        ai_reply = "Sorry, I'm having trouble connecting to my knowledge base right now."
     return jsonify({'reply': ai_reply})
 
 @main.route('/download_report')

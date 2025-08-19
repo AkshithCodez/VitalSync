@@ -37,20 +37,37 @@ body {
     background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     width: 100%; padding: 24px; box-sizing: border-box; margin-bottom: 0;
 }
-/* ... (rest of the card and form styles are the same as before) ... */
+.card-container h2 { margin-top: 0; color: #1a202c; text-align: center; }
+.card-container p { color: #4a5568; text-align: center; margin-bottom: 24px; line-height: 1.5; }
+.input-form { display: flex; gap: 8px; margin-bottom: 12px; }
+.input-form-stacked { display: flex; flex-direction: column; }
 .input-form-stacked label { margin-bottom: 4px; font-weight: bold; color: #4a5568; }
 .input-form-stacked input { margin-bottom: 12px; }
+input[type="text"], input[type="password"], input[type="number"], input[type="date"] {
+    width: 100%; box-sizing: border-box; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px 12px; font-size: 16px;
+}
+button {
+    background-color: #3182ce; color: white; border: none; border-radius: 6px;
+    padding: 10px 20px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.2s;
+}
 button:hover { background-color: #2b6cb0; }
 button:disabled { background-color: #a0aec0; cursor: not-allowed; }
 
 /* --- Auth Forms --- */
 .auth-form { max-width: 400px; margin: 0 auto; }
-/* ... (rest of auth form styles are the same as before) ... */
+.auth-form label { display: block; margin-bottom: 8px; color: #4a5568; font-weight: bold; }
+.auth-form input, .auth-form select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px; margin-bottom: 16px; font-size: 16px; box-sizing: border-box; }
 .auth-form button { width: 100%; margin-top: 8px; }
 
 /* --- List Styles --- */
 .header-with-button { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-/* ... (rest of list styles are the same as before) ... */
+.reset-button { background-color: #e2e8f0; color: #4a5568; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold; }
+.task-list { list-style-type: none; padding: 0; margin: 24px 0 0 0; }
+.task-list li { display: flex; justify-content: space-between; align-items: center; background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; }
+.task-list li:hover { background-color: #edf2f7; }
+.task-list li .task-content { display: flex; align-items: center; padding: 12px; text-decoration: none; color: #2d3748; flex-grow: 1; }
+.delete-button { color: #c53030; font-size: 24px; font-weight: bold; text-decoration: none; padding: 0 16px; opacity: 0.5; }
+.delete-button:hover { opacity: 1; }
 .empty-state { text-align: center; color: #718096; padding: 20px 0; }
 
 /* --- AI Report Styles --- */
@@ -59,11 +76,16 @@ button:disabled { background-color: #a0aec0; cursor: not-allowed; }
 /* --- Calendar Styles --- */
 :root { --fc-border-color: #e2e8f0; --fc-daygrid-event-dot-width: 8px; --fc-event-border-color: #3182ce; --fc-event-bg-color: #3182ce; --fc-event-text-color: white; }
 
+/* --- Chart Controls --- */
+.chart-controls { margin-bottom: 20px; text-align: center; }
+.chart-controls label { margin-right: 10px; font-weight: bold; color: #4a5568; }
+.chart-controls select { padding: 8px; border-radius: 6px; border: 1px solid #cbd5e0; }
+
 /* --- Chatbot Card Styles --- */
 .chat-container {
     display: flex;
     flex-direction: column;
-    height: 500px; /* Give it a fixed height to contain the scrolling */
+    height: 500px;
 }
 .chat-window {
     flex-grow: 1;
@@ -74,7 +96,23 @@ button:disabled { background-color: #a0aec0; cursor: not-allowed; }
     border-radius: 6px;
     margin-bottom: 16px;
 }
-/* ... (rest of chat message styles are the same as before) ... */
+.chat-form { display: flex; gap: 8px; }
+.chat-message { margin-bottom: 12px; display: flex; }
+.chat-message p { padding: 10px 15px; border-radius: 18px; line-height: 1.4; max-width: 85%; margin: 0; text-align: left; }
+
+/* UPDATED Chat Bubble Styles */
+.user-message p {
+    background-color: #3182ce;
+    color: white;
+    margin-left: auto;
+    border-radius: 18px 18px 4px 18px; /* Makes bottom-right corner sharp */
+}
+.ai-message p {
+    background-color: #e2e8f0;
+    color: #2d3748;
+    border-radius: 18px 18px 18px 4px; /* Makes bottom-left corner sharp */
+}
+.typing-animation::after { content: '.'; animation: typing 1s infinite; }
 @keyframes typing { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
 
 /* --- Utility --- */
