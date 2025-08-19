@@ -8,7 +8,6 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // This script runs immediately to prevent a flash of the wrong theme.
         (function() {
             const theme = localStorage.getItem('theme');
             if (theme === 'dark') {
@@ -25,14 +24,13 @@
                 <a href="{{ url_for('main.assistant') }}">AI Assistant</a>
                 <a href="{{ url_for('main.home') }}">Dashboard</a>
                 <a href="{{ url_for('main.tracking') }}">Health Tracking</a>
-                <a href="{{ url_for('main.diet') }}">Diet Planner</a> <a href="{{ url_for('main.yoga') }}">Yoga</a>
+                <a href="{{ url_for('main.diet') }}">Diet Planner</a>
                 <span>Welcome, <strong>{{ current_user.name }}</strong>!</span>
                 <a href="{{ url_for('auth.logout') }}">Logout</a>
             {% else %}
                 <a href="{{ url_for('auth.login') }}">Login</a>
                 <a href="{{ url_for('auth.register') }}">Register</a>
             {% endif %}
-            
             <div class="theme-switch-wrapper">
                 <label class="theme-switch" for="theme-checkbox">
                     <input type="checkbox" id="theme-checkbox" />
@@ -51,14 +49,11 @@
     </div>
 
     <script>
-        // --- Theme Toggle Logic ---
         document.addEventListener('DOMContentLoaded', function() {
             const themeToggle = document.getElementById('theme-checkbox');
-            
             if (localStorage.getItem('theme') === 'dark') {
                 themeToggle.checked = true;
             }
-
             themeToggle.addEventListener('change', function() {
                 if(this.checked) {
                     document.documentElement.classList.add('dark-mode');

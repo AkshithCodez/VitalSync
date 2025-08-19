@@ -29,50 +29,35 @@ def generate_report_in_background(user_id):
                 user.ai_report = f"Sorry, there was an error generating the report. Error: {e}"
                 db.session.commit()
 
-# --- THIS IS THE MISSING HELPER FUNCTION ---
 def get_nutrition_data(food_item):
     api_key = os.getenv('USDA_API_KEY')
     calories, protein, carbs, fats = 0, 0, 0, 0
     if not api_key:
         print("USDA API KEY not found.")
         return 0, 0, 0, 0
-
     try:
-        # Step 1: Search for the food to get its FDC ID
         search_url = f"https://api.nal.usda.gov/fdc/v1/foods/search?api_key={api_key}&query={food_item}"
         search_response = requests.get(search_url)
         search_response.raise_for_status()
         search_data = search_response.json()
-        
-        if not search_data.get('foods'):
-            return 0, 0, 0, 0
-        
+        if not search_data.get('foods'): return 0, 0, 0, 0
         fdc_id = search_data['foods'][0]['fdcId']
-
-        # Step 2: Use the FDC ID to get detailed nutrient info
         details_url = f"https://api.nal.usda.gov/fdc/v1/food/{fdc_id}?api_key={api_key}"
         details_response = requests.get(details_url)
         details_response.raise_for_status()
         details_data = details_response.json()
-
         for nutrient in details_data.get('foodNutrients', []):
             if nutrient['nutrient']['id'] == 1008: calories = int(nutrient.get('amount', 0))
             elif nutrient['nutrient']['id'] == 1003: protein = int(nutrient.get('amount', 0))
             elif nutrient['nutrient']['id'] == 1005: carbs = int(nutrient.get('amount', 0))
             elif nutrient['nutrient']['id'] == 1004: fats = int(nutrient.get('amount', 0))
-                
     except requests.exceptions.RequestException as e:
         print(f"USDA API Error: {e}")
-
     return calories, protein, carbs, fats
 
 def add_meal_from_ai(food_item, meal_type):
     calories, protein, carbs, fats = get_nutrition_data(food_item)
-    new_meal = Meal(
-        meal_type=meal_type, food_item=food_item,
-        calories=calories, protein=protein, carbs=carbs, fats=fats,
-        owner=current_user, date=date.today()
-    )
+    new_meal = Meal(meal_type=meal_type, food_item=food_item, calories=calories, protein=protein, carbs=carbs, fats=fats, owner=current_user, date=date.today())
     db.session.add(new_meal)
     db.session.commit()
 
@@ -93,28 +78,12 @@ def tracking():
 def assistant():
     return render_template('assistant.html', user=current_user)
 
-@main.route('/yoga')
-@login_required
-def yoga():
-    yoga_asanas = [
-        {'name': 'Downward-Facing Dog', 'img': 'downward_dog.jpg', 'desc': 'A foundational pose that calms the brain and energizes the body.'},
-        {'name': 'Warrior II', 'img': 'warrior_2.jpg', 'desc': 'Strengthens the legs and ankles while increasing stamina.'},
-        {'name': 'Triangle Pose', 'img': 'triangle_pose.jpg', 'desc': 'Stretches the legs, hips, and spine.'},
-        {'name': 'Tree Pose', 'img': 'tree_pose.jpg', 'desc': 'Improves balance and focus.'},
-    ]
-    return render_template('yoga.html', user=current_user, asanas=yoga_asanas)
-
 @main.route('/diet')
 @login_required
 def diet():
     today = date.today()
     meals = Meal.query.filter_by(owner=current_user, date=today).all()
-    totals = {
-        'calories': sum(m.calories for m in meals),
-        'protein': sum(m.protein for m in meals),
-        'carbs': sum(m.carbs for m in meals),
-        'fats': sum(m.fats for m in meals)
-    }
+    totals = {'calories': sum(m.calories for m in meals), 'protein': sum(m.protein for m in meals), 'carbs': sum(m.carbs for m in meals), 'fats': sum(m.fats for m in meals)}
     return render_template('diet.html', user=current_user, meals=meals, totals=totals, today=today)
 
 @main.route('/api/events')
@@ -129,7 +98,7 @@ def api_events():
 def api_vitals_data():
     metric = request.args.get('metric', 'Weight')
     logs = VitalsLog.query.filter_by(user_id=current_user.id, metric_name=metric).order_by(VitalsLog.date.asc()).all()
-    ranges = {"Blood Sugar": {"high": 180, "low": 70}, "Blood Pressure": {"high": 130, "low": 90}, "Heart Rate": {"high": 100, "low": 60}}
+    ranges = {"Blood Sugar": {"high": 180, "low": 70}, "Blood Pressure": {"high": 130, "low": 90}, "Heart Rate": {"high": 100, "low": 60}, "Sleep": {"high": 9, "low": 7}}
     labels = [log.date.strftime('%Y-%m-%d') for log in logs]
     datasets = []
     if metric == "Blood Pressure":
@@ -186,6 +155,8 @@ def generate_meal_plan():
     diet_pref = request.form.get('diet_pref', 'a balanced')
     prompt = f"Generate a simple, one-day {diet_pref} meal plan for a user with {current_user.condition}. Total calories around {calories}. List one item for breakfast, lunch, and dinner. Format like: Breakfast: [food]. Lunch: [food]. Dinner: [food]."
     try:
+        Meal.query.filter_by(owner=current_user, date=date.today()).delete()
+        db.session.commit()
         response = model.generate_content(prompt)
         lines = response.text.split('\n')
         for line in lines:
