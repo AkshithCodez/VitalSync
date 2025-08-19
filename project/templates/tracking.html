@@ -1,35 +1,101 @@
 {% extends "base.html" %}
 
-{% block title %}Daily Tracking{% endblock %}
+{% block title %}Health Tracking{% endblock %}
 
 {% block content %}
 <div class="welcome-header">
-    <h3>Daily Tracking for <strong>{{ user.name }}</strong></h3>
+    <h3>Health Tracking Dashboard</h3>
 </div>
 
-<div class="dashboard-layout-single">
-    <div class="tracker-container card-container">
-        <div class="header-with-button">
-            <h2>✅ Daily Health Tracker</h2>
-            <a href="{{ url_for('main.reset_tasks') }}" class="reset-button">Reset Day</a>
+<div class="dashboard-layout">
+    <div class="dashboard-column">
+        <div class="card-container">
+            <h2>Log a New Vital</h2>
+            <form action="{{ url_for('main.add_vital') }}" method="POST" class="input-form-stacked">
+                <label for="metric_name">Vital Sign:</label>
+                <select name="metric_name" id="metric_name" required>
+                    <option value="Weight">Weight (kg)</option>
+                    <option value="Blood Sugar">Blood Sugar (mg/dL)</option>
+                    <option value="Heart Rate">Heart Rate (bpm)</option>
+                    <option value="Pain Level">Pain Level (1-10)</option>
+                    <option value="Sleep">Sleep (hours)</option>
+                </select>
+
+                <label for="metric_value">Value:</label>
+                <input type="text" name="metric_value" placeholder="e.g., 75.5" required>
+                
+                <button type="submit">Log Vital</button>
+            </form>
         </div>
-        <form action="{{ url_for('main.add_task') }}" method="POST" class="input-form">
-            <input type="text" name="task" placeholder="Add a new daily task..." required>
-            <button type="submit" {% if tasks|length >= 15 %}disabled{% endif %}>Add Task</button>
-        </form>
-        <ul class="task-list">
-            {% for task in tasks %}
-            <li class="{% if task.done %}done{% endif %}">
-                <a href="{{ url_for('main.toggle_task', task_id=task.id) }}" class="task-content">
-                    <span class="checkbox"></span>
-                    {{ task.text }}
-                </a>
-                <a href="{{ url_for('main.delete_task', task_id=task.id) }}" class="delete-button">×</a>
-            </li>
-            {% else %}
-            <p class="empty-state">No daily tasks added yet.</p>
-            {% endfor %}
-        </ul>
+
+        <div class="card-container">
+            <h2>Recent Logs</h2>
+            <ul class="task-list">
+                {% for vital in vitals %}
+                <li>
+                    <span class="task-content">
+                        <strong>{{ vital.metric_name }}:</strong> {{ vital.metric_value }} 
+                        <small>({{ vital.date.strftime('%Y-%m-%d') }})</small>
+                    </span>
+                    <a href="{{ url_for('main.delete_vital', vital_id=vital.id) }}" class="delete-button">×</a>
+                </li>
+                {% else %}
+                <p class="empty-state">No vitals logged yet.</p>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="dashboard-column">
+        <div class="card-container">
+            <h2>Your Progress</h2>
+            <div class="chart-controls">
+                <label for="metric-select-chart">View chart for:</label>
+                <select id="metric-select-chart">
+                    <option value="Weight">Weight</option>
+                    <option value="Blood Sugar">Blood Sugar</option>
+                    <option value="Heart Rate">Heart Rate</option>
+                    <option value="Pain Level">Pain Level</option>
+                    <option value="Sleep">Sleep</option>
+                </select>
+            </div>
+            <canvas id="vitalsChart"></canvas>
+        </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('vitalsChart').getContext('2d');
+        let vitalsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Loading...',
+                    data: [],
+                    borderColor: '#3182ce',
+                    tension: 0.1
+                }]
+            }
+        });
+
+        const metricSelect = document.getElementById('metric-select-chart');
+
+        async function updateChart() {
+            const selectedMetric = metricSelect.value;
+            const response = await fetch(`/api/vitals_data?metric=${selectedMetric}`);
+            const chartData = await response.json();
+
+            vitalsChart.data.labels = chartData.labels;
+            vitalsChart.data.datasets[0].data = chartData.data;
+            vitalsChart.data.datasets[0].label = selectedMetric;
+            vitalsChart.update();
+        }
+
+        metricSelect.addEventListener('change', updateChart);
+
+        updateChart();
+    });
+</script>
 {% endblock %}

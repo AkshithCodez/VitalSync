@@ -3,8 +3,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User
 from . import db
 from flask_login import login_user, logout_user, login_required
-import threading # Import the threading library
-from .main import generate_report_in_background # Import our new background function
+import threading
+from .main import generate_report_in_background
 
 auth = Blueprint('auth', __name__)
 
@@ -55,14 +55,12 @@ def register_post():
     
     db.session.add(new_user)
     db.session.commit()
-
+    
     login_user(new_user)
-
-    # Start the AI report generation in a background thread
+    
     thread = threading.Thread(target=generate_report_in_background, args=(new_user.id,))
     thread.start()
-
-    # Immediately redirect to the dashboard
+    
     return redirect(url_for('main.home'))
 
 @auth.route('/logout')

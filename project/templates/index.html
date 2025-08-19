@@ -9,9 +9,7 @@
 </div>
 
 <div class="dashboard-layout">
-
     <div class="dashboard-column">
-
         <div class="report-container card-container">
             <div class="header-with-button">
                 <h2>🤖 AI Health Report</h2>
@@ -29,34 +27,9 @@
                 </div>
             {% endif %}
         </div>
-
-        <div class="tracker-container card-container">
-            <div class="header-with-button">
-                <h2>✅ Daily Health Tracker</h2>
-                <a href="{{ url_for('main.reset_tasks') }}" class="reset-button">Reset Day</a>
-            </div>
-            <form action="{{ url_for('main.add_task') }}" method="POST" class="input-form">
-                <input type="text" name="task" placeholder="Add a new daily task..." required>
-                <button type="submit" {% if tasks|length >= 15 %}disabled{% endif %}>Add Task</button>
-            </form>
-            <ul class="task-list">
-                {% for task in tasks %}
-                <li class="{% if task.done %}done{% endif %}">
-                    <a href="{{ url_for('main.toggle_task', task_id=task.id) }}" class="task-content">
-                        <span class="checkbox"></span>
-                        {{ task.text }}
-                    </a>
-                    <a href="{{ url_for('main.delete_task', task_id=task.id) }}" class="delete-button">×</a>
-                </li>
-                {% else %}
-                <p class="empty-state">No daily tasks added yet.</p>
-                {% endfor %}
-            </ul>
-        </div>
-
     </div>
-    <div class="dashboard-column">
 
+    <div class="dashboard-column">
         <div class="calendar-container card-container">
             <h2>📅 Calendar</h2>
             <div id="calendar"></div>
@@ -76,22 +49,10 @@
                 <button type="submit">Add to Calendar</button>
             </form>
         </div>
-
-        <div class="chat-container card-container">
-            <h2>💬 AI Health Assistant</h2>
-            <div class="chat-window" id="chat-window">
-                <div class="chat-message ai-message"><p>Hello! Ask me any general questions about your condition.</p></div>
-            </div>
-            <form class="chat-form" id="chat-form">
-                <input type="text" id="chat-input" placeholder="Ask a question..." required>
-                <button type="submit">Send</button>
-            </form>
-        </div>
-
     </div>
-    </div>
+</div>
+
 <script>
-    // --- Calendar Script ---
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
         var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -105,55 +66,5 @@
         });
         calendar.render();
     });
-
-    // --- Chatbot Script ---
-    const chatForm = document.getElementById('chat-form');
-    const chatInput = document.getElementById('chat-input');
-    const chatWindow = document.getElementById('chat-window');
-
-    chatForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const userMessage = chatInput.value.trim();
-        if (userMessage === "") return;
-
-        appendMessage(userMessage, 'user-message');
-        chatInput.value = "";
-        appendMessage("...", 'ai-message', true);
-
-        try {
-            const response = await fetch("{{ url_for('main.chat') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userMessage })
-            });
-            if (!response.ok) throw new Error('Network response was not ok');
-            
-            const data = await response.json();
-            removeTypingIndicator();
-            appendMessage(data.reply, 'ai-message');
-        } catch (error) {
-            removeTypingIndicator();
-            appendMessage("Sorry, I'm having trouble connecting.", 'ai-message');
-        }
-    });
-
-    function appendMessage(text, className, isTyping = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('chat-message', className);
-        const messageP = document.createElement('p');
-        messageP.textContent = text;
-        if (isTyping) {
-            messageDiv.id = 'typing-indicator';
-            messageP.classList.add('typing-animation');
-        }
-        messageDiv.appendChild(messageP);
-        chatWindow.appendChild(messageDiv);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
-
-    function removeTypingIndicator() {
-        const typingIndicator = document.getElementById('typing-indicator');
-        if (typingIndicator) typingIndicator.remove();
-    }
 </script>
 {% endblock %}

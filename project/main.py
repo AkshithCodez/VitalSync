@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 from flask_login import login_required, current_user
-from .models import DailyTask, PlannerItem, User
+from .models import PlannerItem, User, VitalsLog
 from . import db
 import google.generativeai as genai
 import os
@@ -18,19 +18,7 @@ def generate_report_in_background(user_id):
     with app.app_context():
         user = User.query.get(user_id)
         if user and not user.ai_report and user.condition:
-            prompt = f"""
-            You are a helpful health information assistant. Your goal is to provide a general, supportive summary of a health condition for a user who has already been diagnosed by a doctor.
-
-            **IMPORTANT RULES:**
-            1.  **DO NOT** provide medical advice.
-            2.  **DO NOT** prescribe, mention, or recommend any specific pharmaceutical drugs or medications.
-            3.  You **CAN** suggest common, safe, non-prescription home-remedy-style actions for temporary relief.
-            4.  You **CAN** recommend general vitamins, nutrients, and healthy lifestyle choices.
-
-            The user's diagnosed condition is: "{user.condition}"
-
-            Please generate a report with four sections: "Understanding Your Condition", "Potential Consequences", "Supportive Measures for Comfort", and "Beneficial Nutrients & Lifestyle".
-            """
+            prompt = f"Generate a supportive health summary for a user diagnosed with {user.condition}. Include sections on understanding the condition, potential consequences, supportive non-prescription measures, and beneficial nutrients. Do NOT give medical advice or mention specific medications."
             try:
                 response = model.generate_content(prompt)
                 user.ai_report = response.text
@@ -42,41 +30,49 @@ def generate_report_in_background(user_id):
 @main.route('/')
 @login_required
 def home():
-    tasks = DailyTask.query.filter_by(user_id=current_user.id).all()
     items = PlannerItem.query.filter_by(user_id=current_user.id).order_by(PlannerItem.appointment_date.asc()).all()
-    return render_template('index.html', user=current_user, tasks=tasks, items=items)
+    return render_template('index.html', user=current_user, items=items)
+
+@main.route('/tracking')
+@login_required
+def tracking():
+    vitals = VitalsLog.query.filter_by(user_id=current_user.id).order_by(VitalsLog.date.desc()).all()
+    return render_template('tracking.html', user=current_user, vitals=vitals)
 
 @main.route('/api/events')
 @login_required
 def api_events():
     items = PlannerItem.query.filter_by(user_id=current_user.id).all()
-    events = [
-        {'title': item.text, 'start': item.appointment_date.isoformat()}
-        for item in items
-    ]
+    events = [{'title': item.text, 'start': item.appointment_date.isoformat()} for item in items]
     return jsonify(events)
+
+@main.route('/api/vitals_data')
+@login_required
+def api_vitals_data():
+    metric = request.args.get('metric', 'Weight')
+    logs = VitalsLog.query.filter_by(user_id=current_user.id, metric_name=metric).order_by(VitalsLog.date.asc()).all()
+    
+    labels = [log.date.strftime('%Y-%m-%d') for log in logs]
+    # Handle non-numeric data gracefully for charting
+    data = []
+    for log in logs:
+        try:
+            data.append(float(log.metric_value))
+        except (ValueError, TypeError):
+            continue # Skip non-numeric values
+
+    return jsonify({'labels': labels, 'data': data})
 
 @main.route('/chat', methods=['POST'])
 @login_required
 def chat():
     user_message = request.json['message']
-    user_condition = current_user.condition
-    prompt = f"""
-    You are 'VitalSync Assistant,' a supportive and informational AI health companion. 
-    Your role is to help a user understand their diagnosed health condition: '{user_condition}'.
-    **Your most important rules are:**
-    1.  **NEVER** provide medical advice.
-    2.  **NEVER** suggest, recommend, or mention any specific medications (prescription or over-the-counter), brands, or dosages.
-    3.  **NEVER** diagnose any condition.
-    4.  **ALWAYS** end your response with a clear disclaimer to consult a healthcare professional for any medical advice.
-    5.  You **CAN** explain concepts, symptoms, and general lifestyle/nutrition in relation to their condition.
-    The user's question is: "{user_message}"
-    """
+    prompt = f"You are a helpful AI health assistant. A user with {current_user.condition} asks: '{user_message}'. Answer informatively, but DO NOT give medical advice, mention medications, or diagnose. End with a disclaimer to consult a doctor."
     try:
         response = model.generate_content(prompt)
         ai_reply = response.text
     except Exception:
-        ai_reply = "Sorry, I'm having trouble connecting to my knowledge base right now. Please try again later."
+        ai_reply = "Sorry, I'm having trouble connecting right now."
     return jsonify({'reply': ai_reply})
 
 @main.route('/download_report')
@@ -112,35 +108,21 @@ def delete_item(item_id):
     db.session.commit()
     return redirect(url_for('main.home'))
 
-@main.route('/add_task', methods=['POST'])
+@main.route('/add_vital', methods=['POST'])
 @login_required
-def add_task():
-    task_text = request.form.get('task')
-    if task_text.strip() and DailyTask.query.filter_by(user_id=current_user.id).count() < 15:
-        new_task = DailyTask(text=task_text, owner=current_user)
-        db.session.add(new_task)
+def add_vital():
+    metric_name = request.form.get('metric_name')
+    metric_value = request.form.get('metric_value')
+    if metric_name and metric_value.strip():
+        new_vital = VitalsLog(metric_name=metric_name, metric_value=metric_value, owner=current_user)
+        db.session.add(new_vital)
         db.session.commit()
-    return redirect(url_for('main.home'))
+    return redirect(url_for('main.tracking'))
 
-@main.route('/delete_task/<int:task_id>')
+@main.route('/delete_vital/<int:vital_id>')
 @login_required
-def delete_task(task_id):
-    task = DailyTask.query.filter_by(id=task_id, user_id=current_user.id).first_or_404()
-    db.session.delete(task)
+def delete_vital(vital_id):
+    vital = VitalsLog.query.filter_by(id=vital_id, user_id=current_user.id).first_or_404()
+    db.session.delete(vital)
     db.session.commit()
-    return redirect(url_for('main.home'))
-
-@main.route('/toggle_task/<int:task_id>')
-@login_required
-def toggle_task(task_id):
-    task = DailyTask.query.filter_by(id=task_id, user_id=current_user.id).first_or_404()
-    task.done = not task.done
-    db.session.commit()
-    return redirect(url_for('main.home'))
-
-@main.route('/reset_tasks')
-@login_required
-def reset_tasks():
-    DailyTask.query.filter_by(user_id=current_user.id).update({DailyTask.done: False})
-    db.session.commit()
-    return redirect(url_for('main.home'))
+    return redirect(url_for('main.tracking'))

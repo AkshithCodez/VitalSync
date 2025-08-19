@@ -23,20 +23,10 @@ body {
 
 /* --- Dashboard Layout --- */
 .dashboard-layout {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    width: 100%;
-    max-width: 1200px;
-    align-items: flex-start;
+    display: flex; flex-wrap: wrap; gap: 24px;
+    width: 100%; max-width: 1200px; align-items: flex-start;
 }
-.dashboard-column {
-    flex: 1;
-    min-width: 400px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
+.dashboard-column { flex: 1; min-width: 400px; display: flex; flex-direction: column; gap: 24px; }
 .welcome-header { width: 100%; max-width: 1200px; text-align: center; color: #4a5568; margin-bottom: 12px; }
 .welcome-header h3 { margin-bottom: 0; }
 .welcome-header p { color: #718096; margin-top: 4px; }
@@ -45,8 +35,7 @@ body {
 /* --- General Card & Form Styles --- */
 .card-container {
     background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    width: 100%; padding: 24px; box-sizing: border-box;
-    margin-bottom: 0; /* Let the column gap handle spacing */
+    width: 100%; padding: 24px; box-sizing: border-box; margin-bottom: 0;
 }
 .card-container h2 { margin-top: 0; color: #1a202c; text-align: center; }
 .card-container p { color: #4a5568; text-align: center; margin-bottom: 24px; line-height: 1.5; }
@@ -70,7 +59,7 @@ button:disabled { background-color: #a0aec0; cursor: not-allowed; }
 .auth-form input, .auth-form select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px; margin-bottom: 16px; font-size: 16px; box-sizing: border-box; }
 .auth-form button { width: 100%; margin-top: 8px; }
 
-/* --- Tracker & Planner List Styles --- */
+/* --- List Styles --- */
 .header-with-button { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .header-with-button h2 { margin-bottom: 0; }
 .reset-button { background-color: #e2e8f0; color: #4a5568; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold; }
@@ -78,32 +67,26 @@ button:disabled { background-color: #a0aec0; cursor: not-allowed; }
 .task-list li { display: flex; justify-content: space-between; align-items: center; background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; }
 .task-list li:hover { background-color: #edf2f7; }
 .task-list li .task-content { display: flex; align-items: center; padding: 12px; text-decoration: none; color: #2d3748; flex-grow: 1; }
-/* ... (rest of task list styles are the same) ... */
 .delete-button { color: #c53030; font-size: 24px; font-weight: bold; text-decoration: none; padding: 0 16px; opacity: 0.5; }
 .delete-button:hover { opacity: 1; }
 .empty-state { text-align: center; color: #718096; padding: 20px 0; }
 
-/* --- AI Report Styles --- */
+/* --- AI Report & PDF --- */
 .report-content pre { white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 16px; line-height: 1.6; color: #2d3748; background-color: #f7fafc; padding: 16px; border-radius: 6px; border: 1px solid #e2e8f0; }
 
 /* --- Calendar Styles --- */
 :root { --fc-border-color: #e2e8f0; --fc-daygrid-event-dot-width: 8px; --fc-event-border-color: #3182ce; --fc-event-bg-color: #3182ce; --fc-event-text-color: white; }
 
-/* --- Chatbot Card Styles (No longer a floating widget) --- */
-.chat-container {
-    display: flex;
-    flex-direction: column;
-    height: 500px; /* Give it a fixed height */
-}
-.chat-window {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 10px;
-    background-color: #f7fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    margin-bottom: 16px;
-}
+/* --- Chart Controls --- */
+.chart-controls { margin-bottom: 20px; text-align: center; }
+.chart-controls label { margin-right: 10px; font-weight: bold; color: #4a5568; }
+.chart-controls select { padding: 8px; border-radius: 6px; border: 1px solid #cbd5e0; }
+
+/* --- Floating Chatbot Widget --- */
+.chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+.chat-toggle-button { width: 60px; height: 60px; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: none; cursor: pointer; background-color: #3182ce; color: white; }
+.chat-widget .chat-container { position: absolute; bottom: 80px; right: 0; width: 350px; height: 450px; max-height: calc(100vh - 100px); }
+.chat-window { flex-grow: 1; overflow-y: auto; padding: 10px; background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 16px; }
 .chat-form { display: flex; gap: 8px; }
 .chat-message { margin-bottom: 12px; display: flex; }
 .chat-message p { padding: 10px 15px; border-radius: 18px; line-height: 1.4; max-width: 85%; margin: 0; text-align: left; }
